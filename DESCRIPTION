@@ -1,0 +1,14 @@
+Package: jumps
+Type: Package
+Title: Hodrick-Prescott Filter with Jumps
+Version: 1.0
+Date: 2024-03-18
+Author: Matteo Pelagatti, Paolo Maranzano
+Maintainer: Matteo Pelagatti <matteo.pelagatti@unimib.it>
+Description: Extraction of a smooth trend with automatically selected jumps.
+License: GPL-3 + file LICENSE
+Imports: Rcpp (>= 1.0.10),
+         stats,
+         nloptr
+LinkingTo: Rcpp
+RoxygenNote: 7.2.3
