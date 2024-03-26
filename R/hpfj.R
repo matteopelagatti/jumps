@@ -38,6 +38,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   y <- as.numeric(y)
   n   <- length(y)
   vy  <- var(y)
+  sdy <- sqrt(vy)
   v_eta  <- numeric(n)
   v_zeta <- numeric(n)
   c_eta_zeta <- numeric(n)
@@ -111,12 +112,17 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   ##### Optimization step
   ## Starting values
   if (is.null(parinit)) {
-    inits <- c(sd_zeta = sqrt(vy)/10, sd_eps = sqrt(vy), sqrt_gamma = 1/10, rep(sqrt(vy), n-1), 0)
+    inits <- c(sd_zeta = sdy/10, sd_eps = sdy, sqrt_gamma = 1/10,
+               rep(1, n-1), 0)
   } else {
     inits <- parinit
   }
   ## Check on starting values
-  lb <- c(0, 0, 0, rep(0, n))
+  # lb <- c(0, 0, 0, rep(0, n))
+  quasizero <- sdy*1.0e-9
+  lb <- c(quasizero, quasizero, quasizero, rep(0, n))
+  inits[inits < lb] <- lb[inits < lb]
+  
   # return(c(obj(inits),
   #          list(nd = numDeriv::grad(function(x) obj(x)[[1]], inits))))
   ## Optimization with CCSA ("conservative convex separable approximation")
@@ -128,7 +134,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
                         opts = list(algorithm = "NLOPT_LD_CCSAQ",
                                     xtol_rel = 1.0e-5,
                                     check_derivatives = FALSE,
-                                    maxeval = 500),
+                                    maxeval = 2000),
                         wgt = FALSE
   )
   if (edf == TRUE) {
@@ -183,12 +189,12 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' choice according to the selected information criterion.
 #' 
 #' @examples
-#' mod <- autohpfj(Nile)
+#' mod <- auto_hpfj(Nile)
 #' plot(as.numeric(Nile))
 #' lines(mod$smoothed_level)
 #' 
 #' @export
-autohpfj <- function(y, grid = seq(0, sd(y)*10, sd(y)/10), ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
+auto_hpfj <- function(y, grid = seq(0, sd(y)*10, sd(y)/10), ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
   ic <- match.arg(ic)
   k <- length(grid)
   last_ic <- Inf
