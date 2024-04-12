@@ -35,11 +35,11 @@
 #' 
 #' @export
 hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
-  X <- as.matrix(X)
-  k <- ncol(X)
   y <- as.numeric(y)
-  n   <- length(y)
-  vy  <- var(y)
+  X <- as.matrix(X)
+  k <- ncol(X) # number of regressors
+  n   <- length(y) # time series length
+  vy  <- var(y, na.rm = TRUE)
   sdy <- sqrt(vy)
   v_eta  <- numeric(n)
   v_zeta <- numeric(n)
@@ -66,7 +66,7 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   vt_eta_ndx <- 4:(n+3)
   vt_reg_ndx <- (n+4):(n+3+k)
   
-  ##### Object function to optimize (log-lik with gradients w.r.t. sd_eta sd_zeta sd_)
+  ##### Object function to optimize (minus mean log-lik with gradients)
   obj <- function(pars, wgt = FALSE) {
     # Time-varying variance of the level
     v_eta[]  <- pars[vt_eta_ndx]*pars[vt_eta_ndx]
@@ -91,12 +91,13 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
     da1 <- matrix(0, n, k)
     da2 <- matrix(0, n, k)
     da(k1, k2, X, da1, da2)
+    # the above Rcpp function does the following
     # for (t in 1:(n-1)) {
     #   da1[t+1, ] <- (1-k1[t])*da1[t, ] + da2[t, ] - k1[t]*X[t, ]
     #   da2[t+1, ] <- da2[t, ] - k2[t]*X[t, ] - k2[t]*da1[t, ]
     # }
     list(
-      # Mean/average log-likelihood for computational stability
+      # Mean negative log-likelihood for computational stability
       objective = mloglik/n,
       # Average gradient
       gradient  = c(
@@ -114,7 +115,7 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
     )
   }
   
-  ##### Contraints to the object function
+  ##### Constraints to the object function
   g <- function(pars, wgt) {
     list(
       constraints = sum(pars[vt_eta_ndx]) - maxsum,
@@ -125,8 +126,8 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   ##### Optimization step
   ## Starting values
   if (is.null(parinit)) {
-    inits <- c(sd_zeta = sqrt(vy)/10, sd_eps = sqrt(vy), sqrt_gamma = 1/10,
-               rep(sqrt(vy), n-1), 0,
+    inits <- c(sd_zeta = sdy/10, sd_eps = sdy, sqrt_gamma = 1/10,
+               rep(1, n-1), 0,
                rep(0, k))
   } else {
     inits <- parinit
@@ -154,7 +155,7 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   )
   if (edf == TRUE) {
     obj(opt$solution, TRUE)
-    df <- sum(w)
+    df <- sum(w) + k
   } else {
     df <- 3 + sum(opt$solution[vt_eta_ndx] > 0) + k
   }
@@ -217,8 +218,7 @@ auto_hpfjx <- function(y, X, grid = seq(0, sd(y)*10, sd(y)/10),
   if (!is.matrix(X)) X <- as.matrix(X)
   if (length(y) != dim(X)[1]) stop("y and X have a different number of observations")
   ic <- match.arg(ic)
-  k <- length(grid)
-  last_ic <- Inf
+  best_ic <- Inf
   for (M in grid) {
     out <- hpfjx(y = y, X = X, maxsum = M, edf = edf)
     current_ic <- switch (ic,
@@ -227,9 +227,9 @@ auto_hpfjx <- function(y, X, grid = seq(0, sd(y)*10, sd(y)/10),
                           aic  = out$ic["aic"],
                           aicc = out$ic["aicc"]
     )
-    if (current_ic < last_ic) {
+    if (current_ic < best_ic) {
       best <- out
-      last_ic <- current_ic
+      best_ic <- current_ic
     }
   }
   best

@@ -37,7 +37,7 @@
 hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   y <- as.numeric(y)
   n   <- length(y)
-  vy  <- var(y)
+  vy  <- var(y, na.rm = TRUE)
   sdy <- sqrt(vy)
   v_eta  <- numeric(n)
   v_zeta <- numeric(n)
@@ -196,8 +196,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' @export
 auto_hpfj <- function(y, grid = seq(0, sd(y)*10, sd(y)/10), ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
   ic <- match.arg(ic)
-  k <- length(grid)
-  last_ic <- Inf
+  best_ic <- Inf
   for (M in grid) {
     out <- hpfj(y, maxsum = M, edf = edf)
     current_ic <- switch (ic,
@@ -206,9 +205,9 @@ auto_hpfj <- function(y, grid = seq(0, sd(y)*10, sd(y)/10), ic = c("bic", "hq", 
                           aic = out$ic["aic"],
                           aicc = out$ic["aicc"]
     )
-    if (current_ic < last_ic) {
+    if (current_ic < best_ic) {
       best <- out
-      last_ic <- current_ic
+      best_ic <- current_ic
     }
   }
   best
