@@ -95,18 +95,33 @@ using namespace Rcpp;
      a1[t+1] = a1[t] + a2[t] + k1[t]*i[t];
      a2[t+1] =         a2[t] + k2[t]*i[t];
      // their variances/covariance
-     p11[t+1] = p11[t] + 2*p12[t] + p22[t] + var_eta[t] - k1[t]*k1[t]*f[t];
-     p12[t+1] = p12[t] + p22[t] + cov_eta_zeta[t] - k1[t]*k2[t]*f[t];
-     p22[t+1] = p22[t] + var_zeta[t] - k2[t]*k2[t]*f[t];
+     if (NumericVector::is_na(y[t])) { // in case of missing y[t]
+       p11[t+1] = p11[t] + 2*p12[t] + p22[t] + var_eta[t];
+       p12[t+1] = p12[t] + p22[t] + cov_eta_zeta[t];
+       p22[t+1] = p22[t] + var_zeta[t];
+     } else {
+       p11[t+1] = p11[t] + 2*p12[t] + p22[t] + var_eta[t] - k1[t]*k1[t]*f[t];
+       p12[t+1] = p12[t] + p22[t] + cov_eta_zeta[t] - k1[t]*k2[t]*f[t];
+       p22[t+1] = p22[t] + var_zeta[t] - k2[t]*k2[t]*f[t];
+     }
      if (t < n-1) {
-       // innovation
-       i[t+1] = y[t+1] - a1[t+1];
-       f[t+1] = p11[t+1] + var_eps[t+1];
-       // Kalman gain
-       k1[t+1] = (p11[t+1] + p12[t+1]) / f[t+1];
-       k2[t+1] = p12[t+1] / f[t+1];
-       // Gaussian log-lik: Eq (5.21) from Pelagatti 2015
-       loglik += log(f[t+1]) + i[t+1]*i[t+1]/f[t+1];
+       if (NumericVector::is_na(y[t+1])) { // in case of missing y[t+1]
+         // innovation
+         i[t+1] = 0;
+         f[t+1] = R_PosInf;
+         // Kalman gain
+         k1[t+1] = 0;
+         k2[t+1] = 0;
+       } else {
+         // innovation
+         i[t+1] = y[t+1] - a1[t+1];
+         f[t+1] = p11[t+1] + var_eps[t+1];
+         // Kalman gain
+         k1[t+1] = (p11[t+1] + p12[t+1]) / f[t+1];
+         k2[t+1] = p12[t+1] / f[t+1];
+         // Gaussian negative log-lik kernel
+         loglik += log(f[t+1]) + i[t+1]*i[t+1]/f[t+1];
+       }
      }
    }
    // smoother

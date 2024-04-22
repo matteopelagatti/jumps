@@ -37,6 +37,7 @@
 hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   y <- as.numeric(y)
   n   <- length(y)
+  nobs <- sum(!is.na(y))
   vy  <- var(y, na.rm = TRUE)
   sdy <- sqrt(vy)
   v_eta  <- numeric(n)
@@ -86,7 +87,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
     rn2 <- r2[-1]*r2[-1] - n22[-1]
     list(
       # Mean/average log-likelihood for computational stability
-      objective = mloglik/n,
+      objective = mloglik/nobs,
       # Average gradient
       gradient  = c(
         # w.r.t sigma_zeta
@@ -97,7 +98,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
         -sum(rn2*pars[3]*v_eta),
         # w.r.t. sigma_eta_t
         -(rn1 + rn2*pars[3]^2)*pars[vt_eta_ndx]
-      )/n
+      )/nobs
     )
   }
   
@@ -145,11 +146,11 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   } else {
     df <- 3 + sum(opt$solution[4:(n+3)] > 0)
   }
-  loglik <- -n*(opt$objective + cnst)
+  loglik <- -nobs*(opt$objective + cnst)
   
   ##### Output list
   list(opt = opt,
-       nobs = n,
+       nobs = nobs,
        df = df,
        maxsum = maxsum,
        loglik = loglik,
@@ -194,7 +195,9 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' lines(mod$smoothed_level)
 #' 
 #' @export
-auto_hpfj <- function(y, grid = seq(0, sd(y)*10, sd(y)/10), ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
+auto_hpfj <- function(y,
+                      grid = seq(0, sd(y, na.rm = TRUE)*10, sd(y, na.rm = TRUE)/10),
+                      ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
   ic <- match.arg(ic)
   best_ic <- Inf
   for (M in grid) {

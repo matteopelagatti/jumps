@@ -1,0 +1,113 @@
+---
+title: "Formulae"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Formulae}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(jumps)
+```
+
+# Introduction
+
+We report all the formulae used in the main computations that take place in the package as a reference for the users and developers.
+
+# Basic model for the HP filter with jumps
+
+The basic model is based on the state-space representation
+$$
+\begin{aligned}
+  y_t &= \alpha^{(1)}_t + \varepsilon_t, \qquad &\varepsilon_t \sim NID(0, \sigma^2_{\varepsilon}) \\
+  \alpha^{(1)}_{t+1} &= \alpha^{(1)}_{t} + \alpha^{(2)}_{t} + \eta_{t}, \qquad &\eta_t \sim NID(0, \sigma^2_{\eta, t}) \\
+  \alpha^{(2)}_{t+1} &= \alpha^{(2)}_{t} + \zeta_{t}, \qquad &\zeta_t \sim NID(0, \sigma^2_{\zeta,t})
+\end{aligned}
+$$
+with initial conditions
+$$
+  \begin{bmatrix}
+    \alpha^{(1)}_1 \\
+    \alpha^{(2)}_1
+  \end{bmatrix}
+  \sim N\left(
+    \begin{bmatrix}
+      a^{(1)}_1 \\
+      a^{(2)}_1
+    \end{bmatrix},
+    \begin{bmatrix}
+      p^{(11)}_1 & p^{(12)}_1\\
+      p^{(12)}_1 & p^{(22)}_1
+    \end{bmatrix}      
+  \right).
+$$
+
+## Scalar Kalman filtering recursions
+
+The Kalman filtering recursions, written in scalar form (to gain computational speed and insights) are the following.
+
+The initial innovation, its variance and the Kalman gains are.
+$$
+\begin{aligned}
+i_1 &= y_1 - a^{(1)}_1 \\
+f_1 &= p^{11}_1 + \sigma^2_{\varepsilon} \\
+k^{(1)}_1 &= (p^{(11)}_1 + p^{(12)}_1) / f_1 \\
+k^{(1)}_1 &= p^{(12)}_1 / f_1
+\end{aligned}
+$$
+For $t=1, 2, \ldots, n-1$ the recursions are
+$$
+\begin{aligned}
+a^{(1)}_{t+1} &= a^{(1)}_{t} + a^{(2)}_{t} + k^{(1)}_t i_t \\
+a^{(2)}_{t+1} &= a^{(2)}_{t} + k^{(2)}_t i_t \\
+\\
+p^{(11)}_{t+1} &= p^{(11)}_t + 2 p^{(12)}_t + p^{(22)}_t + \sigma^2_{\eta,t} - k^{(1)}_t k^{(1)}_t f_t \\
+p^{(12)}_{t+1} &= p^{(12)}_t + p^{(22)}_t - k^{(1)}_t k^{(2)}_t f_t\\
+p^{(22)}_{t+1} &= p^{(22)}_t + \sigma^2_{\zeta,t} - k^{(2)}_t k^{(2)}_t f_t\\
+\\
+i_{t+1} &= y_{t+1} - a^{(1)}_{t+1} \\
+f_{t+1} &= p^{11}_{t+1} + \sigma^2_{\varepsilon} \\
+k^{(1)}_{t+1} &= (p^{(11)}_{t+1} + p^{(12)}_{t+1}) / f_{t+1} \\
+k^{(2)}_{t+1} &= p^{(12)}_{t+1} / f_{t+1}
+\end{aligned}
+$$
+
+## Modifications when missing observations are present
+
+When one ore more values of $y_t$ are missing, then the only modifications to the above recursions are the following.
+$$
+\begin{aligned}
+i_{t+1} &= 0 \\
+f_{t+1} &= \infty \\
+k^{(1)}_{t+1} &= 0 \\
+k^{(1)}_{t+1} &= 0
+\end{aligned}.
+$$
+## Diffuse initial conditions
+
+Since the two state variables are nonstationary, their initialization should be diffuse:
+$$
+  \begin{bmatrix}
+    \alpha^{(1)}_1 \\
+    \alpha^{(2)}_1
+  \end{bmatrix}
+  \sim N\left(
+    \begin{bmatrix}
+      0 \\
+      0
+    \end{bmatrix},
+    \begin{bmatrix}
+      v & 0\\
+      0 & v
+    \end{bmatrix}      
+  \right),
+$$
+with $v \rightarrow\infty$.
