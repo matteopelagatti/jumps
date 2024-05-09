@@ -58,9 +58,9 @@ The initial innovation, its variance and the Kalman gains are.
 $$
 \begin{aligned}
 i_1 &= y_1 - a^{(1)}_1 \\
-f_1 &= p^{11}_1 + \sigma^2_{\varepsilon} \\
-k^{(1)}_1 &= (p^{(11)}_1 + p^{(12)}_1) / f_1 \\
-k^{(1)}_1 &= p^{(12)}_1 / f_1
+f_1 &= p^{(11)}_1 + \sigma^2_{\varepsilon} \\
+k^{(1)}_1 &= \left(p^{(11)}_1 + p^{(12)}_1\right) / f_1 \\
+k^{(2)}_1 &= p^{(12)}_1 / f_1
 \end{aligned}
 $$
 For $t=1, 2, \ldots, n-1$ the recursions are
@@ -75,7 +75,7 @@ p^{(22)}_{t+1} &= p^{(22)}_t + \sigma^2_{\zeta,t} - k^{(2)}_t k^{(2)}_t f_t\\
 \\
 i_{t+1} &= y_{t+1} - a^{(1)}_{t+1} \\
 f_{t+1} &= p^{11}_{t+1} + \sigma^2_{\varepsilon} \\
-k^{(1)}_{t+1} &= (p^{(11)}_{t+1} + p^{(12)}_{t+1}) / f_{t+1} \\
+k^{(1)}_{t+1} &= \left(p^{(11)}_{t+1} + p^{(12)}_{t+1}\right) / f_{t+1} \\
 k^{(2)}_{t+1} &= p^{(12)}_{t+1} / f_{t+1}
 \end{aligned}
 $$
@@ -111,3 +111,35 @@ $$
   \right),
 $$
 with $v \rightarrow\infty$.
+
+Let us carry out the computations for $t=1, 2, 3, 4$ and then take the limit for $v \rightarrow\infty$.
+
+### $t=1$
+$$
+\begin{aligned}
+a_1^{(1)}  &= 0 \\
+a_1^{(2)}  &= 0 \\
+p_1^{(11)} &= v \\
+p_1^{(12)} &= 0 \\
+p_1^{(22)} &= v \\
+i_1        &= y_1 \\
+f_1        &= v + \sigma^2_{\varepsilon} \\
+k_1^{(1)}  &= v/(v + \sigma^2_{\varepsilon}) \\
+k_1^{(2)}  &= 0
+\end{aligned}
+$$
+
+### $t=2$
+$$
+\begin{aligned}
+a_2^{(1)}  &= y_1 \\
+a_2^{(2)}  &= 0 \\
+p_2^{(11)} &= 2v + \sigma^2_{\eta,1} \\
+p_2^{(12)} &= v \\
+p_2^{(22)} &= v + \sigma^2_{\zeta,1} \\
+i_2        &= y_2 - y_1 \\
+f_2        &= 2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon \\
+k_2^{(1)}  &= (3v + \sigma^2_{\eta,1}) / (2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon) \rightarrow 3/2 \\
+k_2^{(2)}  &= v / (2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon) \rightarrow 1/2
+\end{aligned}
+$$
