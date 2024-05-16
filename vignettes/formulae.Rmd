@@ -91,6 +91,7 @@ k^{(1)}_{t+1} &= 0 \\
 k^{(1)}_{t+1} &= 0
 \end{aligned}.
 $$
+
 ## Diffuse initial conditions
 
 Since the two state variables are nonstationary, their initialization should be diffuse:
@@ -112,7 +113,7 @@ $$
 $$
 with $v \rightarrow\infty$.
 
-Let us carry out the computations for $t=1, 2, 3, 4$ and then take the limit for $v \rightarrow\infty$.
+Let us carry out the computations for $t=1, 2, 3$ and then take the limit for $v \rightarrow\infty$.
 
 ### $t=1$
 $$
@@ -134,12 +135,33 @@ $$
 \begin{aligned}
 a_2^{(1)}  &= y_1 \\
 a_2^{(2)}  &= 0 \\
-p_2^{(11)} &= 2v + \sigma^2_{\eta,1} \\
+p_2^{(11)} &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} \\
 p_2^{(12)} &= v \\
 p_2^{(22)} &= v + \sigma^2_{\zeta,1} \\
-i_2        &= y_2 - y_1 \\
-f_2        &= 2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon \\
-k_2^{(1)}  &= (3v + \sigma^2_{\eta,1}) / (2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon) \rightarrow 3/2 \\
-k_2^{(2)}  &= v / (2v + \sigma^2_{\eta,1} + \sigma^2_\varepsilon) \rightarrow 1/2
+i_2        &= y_2 - \frac{v}{v + \sigma^2_\varepsilon}y_1 \rightarrow y_2 - y_1 \\
+f_2        &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon \\
+k_2^{(1)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow 2 \\
+k_2^{(2)}  &= \frac{v}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow 1
 \end{aligned}
 $$
+
+### $t=3$
+$$
+\begin{aligned}
+a_3^{(1)}  &= \frac{v^2}{v + \sigma^2_\varepsilon}y_1 +
+  \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}\left(y_2 - \frac{v^2}{v + \sigma^2_\varepsilon}y_1\right)
+  \rightarrow 2y_2 - y_1\\
+a_3^{(2)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}\left(y_2 - \frac{v^2}{v + \sigma^2_\varepsilon}y_1\right)
+  \rightarrow y_2 - y_1 \\
+p_3^{(11)} &= 5v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_{\zeta,1} + \sigma^2_{\eta,2}
+  - \frac{\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}\right)^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}
+\rightarrow \sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} \\
+p_3^{(12)} &= 2v + \sigma^2_{\zeta,1} - \frac{v\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}\right)}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow \sigma^2_{\zeta,1}\\
+p_3^{(22)} &= v + \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2} - \frac{v^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2}\\
+i_3        &\rightarrow y_3 - 2y_2 + y_1 \\
+f_3        &\rightarrow \sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon \\
+k_3^{(1)}  &\rightarrow  \frac{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + 2\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon}\\
+k_3^{(2)}  &\rightarrow \frac{\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon}
+\end{aligned}
+$$
+
