@@ -113,6 +113,8 @@ $$
 $$
 with $v \rightarrow\infty$.
 
+As it will be clear from the computations below, when $v$ is infinite, the mean squared errors of $a^{(1)}_t$ and $a^{(2)}_t$, and the variances of the innovations are infinite for $t=1, 2$, while from $t=3$ on they are finite. 
+
 Let us carry out the computations for $t=1, 2, 3$ and then take the limit for $v \rightarrow\infty$.
 
 ### $t=1$
@@ -165,3 +167,6 @@ k_3^{(2)}  &\rightarrow \frac{\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{
 \end{aligned}
 $$
 
+## Smoothing
+
+## Analytical scores
