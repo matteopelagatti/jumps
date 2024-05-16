@@ -52,13 +52,13 @@ $$
 
 ## Scalar Kalman filtering recursions
 
-The Kalman filtering recursions, written in scalar form (to gain computational speed and insights) are the following.
+The Kalman filtering recursions, written in scalar form (to gain computational speed and insights) are the following (for generality we let also the variance of the measurement error vary over time).
 
-The initial innovation, its variance and the Kalman gains are.
+The initial innovation, its variance and the Kalman gains are:
 $$
 \begin{aligned}
 i_1 &= y_1 - a^{(1)}_1 \\
-f_1 &= p^{(11)}_1 + \sigma^2_{\varepsilon} \\
+f_1 &= p^{(11)}_1 + \sigma^2_{\varepsilon,1} \\
 k^{(1)}_1 &= \left(p^{(11)}_1 + p^{(12)}_1\right) / f_1 \\
 k^{(2)}_1 &= p^{(12)}_1 / f_1
 \end{aligned}
@@ -74,7 +74,7 @@ p^{(12)}_{t+1} &= p^{(12)}_t + p^{(22)}_t - k^{(1)}_t k^{(2)}_t f_t\\
 p^{(22)}_{t+1} &= p^{(22)}_t + \sigma^2_{\zeta,t} - k^{(2)}_t k^{(2)}_t f_t\\
 \\
 i_{t+1} &= y_{t+1} - a^{(1)}_{t+1} \\
-f_{t+1} &= p^{11}_{t+1} + \sigma^2_{\varepsilon} \\
+f_{t+1} &= p^{11}_{t+1} + \sigma^2_{\varepsilon,t+1} \\
 k^{(1)}_{t+1} &= \left(p^{(11)}_{t+1} + p^{(12)}_{t+1}\right) / f_{t+1} \\
 k^{(2)}_{t+1} &= p^{(12)}_{t+1} / f_{t+1}
 \end{aligned}
@@ -124,8 +124,8 @@ p_1^{(11)} &= v \\
 p_1^{(12)} &= 0 \\
 p_1^{(22)} &= v \\
 i_1        &= y_1 \\
-f_1        &= v + \sigma^2_{\varepsilon} \\
-k_1^{(1)}  &= v/(v + \sigma^2_{\varepsilon}) \\
+f_1        &= v + \sigma^2_{\varepsilon, 1} \\
+k_1^{(1)}  &= v/(v + \sigma^2_{\varepsilon, 1}) \\
 k_1^{(2)}  &= 0
 \end{aligned}
 $$
@@ -135,33 +135,33 @@ $$
 \begin{aligned}
 a_2^{(1)}  &= y_1 \\
 a_2^{(2)}  &= 0 \\
-p_2^{(11)} &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} \\
+p_2^{(11)} &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon, 1}} \\
 p_2^{(12)} &= v \\
 p_2^{(22)} &= v + \sigma^2_{\zeta,1} \\
 i_2        &= y_2 - \frac{v}{v + \sigma^2_\varepsilon}y_1 \rightarrow y_2 - y_1 \\
-f_2        &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon \\
-k_2^{(1)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow 2 \\
-k_2^{(2)}  &= \frac{v}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow 1
+f_2        &= 2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_{\varepsilon, 2} \\
+k_2^{(1)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}} \rightarrow 2 \\
+k_2^{(2)}  &= \frac{v}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}} \rightarrow 1
 \end{aligned}
 $$
 
 ### $t=3$
 $$
 \begin{aligned}
-a_3^{(1)}  &= \frac{v^2}{v + \sigma^2_\varepsilon}y_1 +
-  \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}\left(y_2 - \frac{v^2}{v + \sigma^2_\varepsilon}y_1\right)
+a_3^{(1)}  &= \frac{v^2}{v + \sigma^2_{\varepsilon,1}}y_1 +
+  \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}}\left(y_2 - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}y_1\right)
   \rightarrow 2y_2 - y_1\\
-a_3^{(2)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}\left(y_2 - \frac{v^2}{v + \sigma^2_\varepsilon}y_1\right)
+a_3^{(2)}  &= \frac{3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}}\left(y_2 - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}y_1\right)
   \rightarrow y_2 - y_1 \\
-p_3^{(11)} &= 5v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_{\zeta,1} + \sigma^2_{\eta,2}
-  - \frac{\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}\right)^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon}
+p_3^{(11)} &= 5v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\zeta,1} + \sigma^2_{\eta,2}
+  - \frac{\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}\right)^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}}
 \rightarrow \sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} \\
-p_3^{(12)} &= 2v + \sigma^2_{\zeta,1} - \frac{v\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon}\right)}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow \sigma^2_{\zeta,1}\\
-p_3^{(22)} &= v + \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2} - \frac{v^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_\varepsilon} + \sigma^2_\varepsilon} \rightarrow \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2}\\
+p_3^{(12)} &= 2v + \sigma^2_{\zeta,1} - \frac{v\left(3v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}}\right)}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}} \rightarrow \sigma^2_{\zeta,1}\\
+p_3^{(22)} &= v + \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2} - \frac{v^2}{2v + \sigma^2_{\eta,1} - \frac{v^2}{v + \sigma^2_{\varepsilon,1}} + \sigma^2_{\varepsilon,2}} \rightarrow \sigma^2_{\zeta,1} + \sigma^2_{\zeta,2}\\
 i_3        &\rightarrow y_3 - 2y_2 + y_1 \\
-f_3        &\rightarrow \sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon \\
-k_3^{(1)}  &\rightarrow  \frac{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + 2\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon}\\
-k_3^{(2)}  &\rightarrow \frac{\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_\varepsilon}
+f_3        &\rightarrow \sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_{\varepsilon,3} \\
+k_3^{(1)}  &\rightarrow  \frac{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + 2\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_{\varepsilon,3}}\\
+k_3^{(2)}  &\rightarrow \frac{\sigma^2_{\zeta,1}}{\sigma^2_{\eta,1} + \sigma^2_{\eta,2} + \sigma^2_{\zeta,1} + \sigma^2_{\varepsilon,3}}
 \end{aligned}
 $$
 
