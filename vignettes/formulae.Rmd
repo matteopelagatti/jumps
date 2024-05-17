@@ -169,4 +169,60 @@ $$
 
 ## Smoothing
 
+The smoothing recursions start from $t=n$ and work backwards down to $t=1$. The following quantities are auxiliar to compute the smoothed values of $\alpha^{(1)}_t$ and their MSE.
+$$
+\begin{aligned}
+   r^{(1)}_{n+1} &= 0 \\
+   r^{(2)}_{n+1} &= 0 \\
+   n^{(11)}_{n+1} &= 0 \\
+   n^{(12)}_{n+1} &= 0 \\
+   n^{(22)}_{n+1} &= 0 \\
+   e_{n} &= i_{n}/f_{n} \\
+   d_{n} &= 1/f_{n} \\
+\end{aligned}
+$$
+For $t=n, n-1, \ldots, 1$, compute
+$$
+\begin{aligned}
+     r^{\left(1\right)}_t &= i_t/f_t + \left(1 - k^{\left(1\right)}_t\right) r^{\left(1\right)}_{t+1} -
+                 k^{\left(2\right)}_t r^{\left(2\right)}_{t+1} \\
+     r^{\left(2\right)}_t &= r^{\left(1\right)}_{t+1} + r^{\left(2\right)}_{t+1} \\
+     n^{\left(11\right)}_t &= \left(1-k^{\left(1\right)}_t\right)^2 n^{\left(11\right)}_{t+1} -
+              2\left(1-k^{\left(1\right)}_t\right) k^{\left(2\right)}_t n^{\left(12\right)}_{t+1} +
+              k^{\left(2\right)}_t k^{\left(2\right)}_t n^{\left(22\right)}_{t+1} + 1/f_t \\
+     n^{\left(12\right)}_t &= \left(1-k^{\left(1\right)}_t\right) \left(n^{\left(11\right)}_{t+1} + n^{\left(12\right)}_{t+1}\right) -
+               k^{\left(2\right)}_t \left(n^{\left(12\right)}_{t+1} + n^{\left(22\right)}_{t+1}\right) \\
+     n^{\left(22\right)}_t &= n^{\left(11\right)}_{t+1} + 2 n^{\left(12\right)}_{t+1} + n^{\left(22\right)}_{t+1} \\
+e_{t-1} &= i_{t-1}/f_{t-1} - k^{(1)}_{t-1} r^{(1)}_{t} - k^{(2)}_{t-1} r^{(2)}_t \\
+d_{t-1} &= 1/f_{t-1} + k^{(1)}_{t-1} k^{(1)}_{t-1} n^{(11)}_t +
+       2 k^{(1)}_{t-1} k^{(2)}_{t-1} n^{(12)}_t + k^{(2)}_{t-1} k^{(2)}_{t-1} n^{(22)}_t
+\end{aligned}
+$$
+The smoothed values of $\alpha^{(1)}_t$, that is the Hodrick-Prescott filtered time series, and their mean squared errors are given by
+$$
+\begin{aligned}
+a^{(1)}_{t|n} &= a^{(1)}_t + p^{(11)}_t r^{(1)}_t + p^{(12)}_t r^{(2)}_t \\
+p^{(11)}_{t|n} &= p^{(11)}_t - p^{(11)}_t p^{(11)}_t n^{(11)}_t -
+                  2 p^{(11)}_t p^{(12)}_t n^{(12)}_t - p^{(12)}_t p^{(12)}_t n^{(22)}_t
+\end{aligned}
+$$
+
+## Weights for computing the effective degrees of freedom
+
+Since the smoother is linear in the observations, the vector of smoothed $\alpha^{(1)}_t$, say $\mathbf{s}$, is just a linear transformation of the vector of observations, $\mathbf{y}$:
+$$
+  \mathbf{s} = \mathbf{W} \mathbf{y}.
+$$
+The number of effective degrees of freedom is the trace of the weighting matrix $\mathbf{W}$ (cf.\ Hastie, Tibshirani and Friedman, 2009, *The Elements of Statistical Learning*, Section 5.4.1). The formulae for computing such weights in a general state-space form can be found in Koopman and Harvey (2003) *Journal of Economic Dynamics and Control*, vol.\ 27. In our framework, the diagonal elements of the matrix $\mathbf{W}$ are given by
+$$
+\begin{aligned}
+  w_{tt} &= p^{(11)}_t \left(1/f_t + k^{(1)}_t k^{(1)}_t n^{(11)}_t +
+           2 k^{(1)}_t k^{(2)}_t n^{(12)}_t +
+           k^{(2)}_t k^{(2)}_t n^{(22)}_t - k^{(1)}_t n^{(11)}_t -
+           k^{(2)}_t n^{(12)}_t\right) \\
+           &\;\;\;\; - p^{(12)}_t \left(k^{(1)}_t (n^{(11)}_t + n^{(12)}_t) +
+           k^{(2)}_t (n^{(12)}_t + n^{(22)}_t)\right)
+\end{aligned}
+$$
+
 ## Analytical scores

@@ -136,11 +136,11 @@ using namespace Rcpp;
    double ksq;
    double kk;
    for (unsigned int t = n-1; t >= 0; --t) {
-     r1[t] = i[t]/f[t] + (1 - k1[t])*r1[t+1] - k2[t]*r2[t+1];
-     r2[t] = r1[t+1] + r2[t+1];
-     k = (1-k1[t]);
+     k = (1 - k1[t]);
      ksq = k*k;
      kk = k2[t]*k;
+     r1[t] = i[t]/f[t] + k*r1[t+1] - k2[t]*r2[t+1];
+     r2[t] = r1[t+1] + r2[t+1];
      n11[t] = ksq*n11[t+1] - 2*kk*n12[t+1] + k2[t]*k2[t]*n22[t+1] + 1/f[t];
      n12[t] = k*(n11[t+1] + n12[t+1]) - k2[t]*(n12[t+1] + n22[t+1]);
      n22[t] = n11[t+1] + 2*n12[t+1] + n22[t+1];
