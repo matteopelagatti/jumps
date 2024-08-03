@@ -82,7 +82,7 @@ $$
 
 ## Modifications when missing observations are present
 
-When one ore more values of $y_t$ are missing, then the only modifications to the above recursions are the following.
+When one or more values of $y_t$ are missing, then the only modifications to the above recursions are the following.
 $$
 \begin{aligned}
 i_{t+1} &= 0 \\
