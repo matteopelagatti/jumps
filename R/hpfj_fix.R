@@ -212,7 +212,7 @@ auto_hpfj_fix <- function(y, lambda,
   k <- length(grid)
   last_ic <- Inf
   for (M in grid) {
-    out <- hpfj_fixed(y, lambda, maxsum = M, edf = edf)
+    out <- hpfj_fix(y, lambda, maxsum = M, edf = edf)
     current_ic <- switch (ic,
                           bic = out$ic["bic"],
                           hq = out$ic["hq"],
