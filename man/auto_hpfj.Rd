@@ -6,7 +6,7 @@
 \usage{
 auto_hpfj(
   y,
-  grid = seq(0, sd(y) * 10, sd(y)/10),
+  grid = seq(0, sd(y, na.rm = TRUE) * 10, sd(y, na.rm = TRUE)/10),
   ic = c("bic", "hq", "aic", "aicc"),
   edf = TRUE
 )

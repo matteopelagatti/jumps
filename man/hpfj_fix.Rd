@@ -15,7 +15,7 @@ c("daily", "weekly", "monthly", "quarterly", "annual"); in this case the
 values of the smoothing constant are computed according to Ravn and Uhlig (2002),
 that is, \eqn{6.25 s^4}, where $s$ is the number of observations per year.}
 
-\item{maxsum}{maximum sum of additional level variances}
+\item{maxsum}{maximum sum of additional level standard deviations;}
 
 \item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
 the number of degrees of freedom in the LASSO-regression way.}

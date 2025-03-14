@@ -12,7 +12,7 @@
 #' c("daily", "weekly", "monthly", "quarterly", "annual"); in this case the
 #' values of the smoothing constant are computed according to Ravn and Uhlig (2002),
 #' that is, \eqn{6.25 s^4}, where $s$ is the number of observations per year.
-#' @param maxsum maximum sum of additional level variances
+#' @param maxsum maximum sum of additional level standard deviations;
 #' @param edf boolean if TRUE computes effective degrees of freedom otherwise computes
 #' the number of degrees of freedom in the LASSO-regression way.
 #' @param parinit either NULL or vector of 3+n parameters with starting values for the
@@ -52,8 +52,10 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
     if (is.null(lambda)) stop("no valid value for lambda")
   }
   y <- as.numeric(y)
+  nobs <- sum(!is.na(y))
   n   <- length(y)
   vy  <- var(y)
+  sdy <- sqrt(vy)
   v_eta  <- numeric(n)
   v_zeta <- numeric(n)
   c_eta_zeta <- numeric(n)
@@ -101,7 +103,7 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
     rn2 <- r2[-1]*r2[-1] - n22[-1]
     list(
       # Mean/average log-likelihood for computational stability
-      objective = mloglik/n,
+      objective = mloglik/nobs,
       # Average gradient
       gradient  = c(
         # w.r.t sigma_zeta
@@ -110,7 +112,7 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
         -sum(rn2*pars[2]*v_eta),
         # w.r.t. sigma_eta_t
         -(rn1 + rn2*pars[2]*pars[2])*pars[vt_eta_ndx]
-      )/n
+      )/nobs
     )
   }
   
@@ -125,12 +127,16 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   ##### Optimization step
   ## Starting values
   if (is.null(parinit)) {
-    inits <- c(sd_zeta = sqrt(vy)/10, sqrt_gamma = 1/10, rep(sqrt(vy), n-1), 0)
+    inits <- c(sd_zeta = sdy/10, sqrt_gamma = 1/10, rep(1, n-1), 0)
   } else {
     inits <- parinit
   }
   ## Check on starting values
-  lb <- c(0, 0, rep(0, n))
+  # lb <- c(0, 0, rep(0, n))
+  quasizero <- sdy*1.0e-9
+  lb <- c(quasizero, quasizero, rep(0, n))
+  inits[inits < lb] <- lb[inits < lb]
+  
   # return(c(obj(inits),
   #          list(nd = numDeriv::grad(function(x) obj(x)[[1]], inits))))
   ## Optimization with CCSA ("conservative convex separable approximation")
@@ -142,7 +148,7 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
                         opts = list(algorithm = "NLOPT_LD_CCSAQ",
                                     xtol_rel = 1.0e-5,
                                     check_derivatives = FALSE,
-                                    maxeval = 500),
+                                    maxeval = 2000),
                         wgt = FALSE
   )
   if (edf == TRUE) {
@@ -151,9 +157,9 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   if (edf == TRUE) {
     df <- sum(w)
   } else {
-    df <- 3 + sum(opt$solution[vt_eta_ndx] > 0)
+    df <- 2 + sum(opt$solution[vt_eta_ndx] > 0)
   }
-  loglik <- -n*(opt$objective + cnst)
+  loglik <- -nobs*(opt$objective + cnst)
   
   ##### Output list
   list(opt = opt,
@@ -168,12 +174,15 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
        weights = if (edf) w else NULL,
        ic = c(aic  = 2*(df - loglik),
               aicc = 2*(df*n/(n-df-1) - loglik),
-              bic  = log(df)*n - 2*loglik,
+              # bic  = log(df)*n - 2*loglik,
+              bic  = df*log(n) - 2*loglik,
               hq   = 2*(log(log(n))*df - loglik)),
        smoothed_level = (a1 + p11*r1 + p12*r2)[-(n+1)],
        var_smoothed_level = (p11 - p11*p11*n11 - 2*p11*p12*n12 - p12*p12*n22)[-(n+1)]
   )
 }
+
+
 
 #' Automatic selection of the optimal HP filter with jumps and fixed smoothing
 #' constant
@@ -199,7 +208,7 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' choice according to the selected information criterion.
 #' 
 #' @examples
-#' mod <- auto_hpfj_fixed(Nile, "annual")
+#' mod <- auto_hpfj_fix(Nile, "annual")
 #' plot(as.numeric(Nile))
 #' lines(mod$smoothed_level)
 #' 

@@ -7,16 +7,16 @@
 hpfj(y, maxsum = sd(y), edf = TRUE, parinit = NULL)
 }
 \arguments{
-\item{y}{vector with the time series}
+\item{y}{vector with the time series;}
 
-\item{maxsum}{maximum sum of additional level variances}
+\item{maxsum}{maximum sum of additional level standard deviations;}
 
 \item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
-the number of degrees of freedom in the LASSO-regression way.}
+the number of degrees of freedom in the LASSO-regression way;}
 
 \item{parinit}{either NULL or vector of 3+n parameters with starting values for the
 optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-square root of gamma, n additional std deviations for the slope}
+square root of gamma, n additional std deviations for the slope.}
 }
 \value{
 list with the following slots:

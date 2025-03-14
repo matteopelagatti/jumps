@@ -7,13 +7,13 @@
 #' distributed disturbances) as in Wahba (1978):
 #' \eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
 #' 
-#' @param y vector with the time series
-#' @param maxsum maximum sum of additional level variances
+#' @param y vector with the time series;
+#' @param maxsum maximum sum of additional level standard deviations;
 #' @param edf boolean if TRUE computes effective degrees of freedom otherwise computes
-#' the number of degrees of freedom in the LASSO-regression way.
+#' the number of degrees of freedom in the LASSO-regression way;
 #' @param parinit either NULL or vector of 3+n parameters with starting values for the
 #' optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-#' square root of gamma, n additional std deviations for the slope
+#' square root of gamma, n additional std deviations for the slope.
 #' @return list with the following slots:
 #' \itemize{
 #'  \item opt: the output of the optimization function (nloptr)
@@ -144,7 +144,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   if (edf == TRUE) {
     df <- sum(w)
   } else {
-    df <- 3 + sum(opt$solution[4:(n+3)] > 0)
+    df <- 3 + sum(opt$solution[vt_eta_ndx] > 0)
   }
   loglik <- -nobs*(opt$objective + cnst)
   
@@ -161,7 +161,8 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
        weights = if (edf) w else NULL,
        ic = c(aic  = 2*(df - loglik),
               aicc = 2*(df*n/(n-df-1) - loglik),
-              bic  = log(df)*n - 2*loglik,
+              # bic  = log(df)*n - 2*loglik,
+              bic  = df*log(n) - 2*loglik,
               hq   = 2*(log(log(n))*df - loglik)),
        smoothed_level = (a1 + p11*r1 + p12*r2)[-(n+1)],
        var_smoothed_level = (p11 - p11*p11*n11 - 2*p11*p12*n12 - p12*p12*n22)[-(n+1)]

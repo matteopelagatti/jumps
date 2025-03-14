@@ -41,7 +41,7 @@ runs \code{hpfj_fix} on a grid of regularizatoin constants and returns the
 relative information criteria for selecting the optimal constant.
 }
 \examples{
-mod <- auto_hpfj_fixed(Nile, "annual")
+mod <- auto_hpfj_fix(Nile, "annual")
 plot(as.numeric(Nile))
 lines(mod$smoothed_level)
 

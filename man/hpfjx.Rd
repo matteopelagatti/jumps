@@ -11,7 +11,7 @@ hpfjx(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL)
 
 \item{X}{matrix with regressors in the columns}
 
-\item{maxsum}{maximum sum of additional level variances}
+\item{maxsum}{maximum sum of additional level standard deviations;}
 
 \item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
 the number of degrees of freedom in the LASSO-regression way.}

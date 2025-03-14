@@ -9,7 +9,7 @@
 #' 
 #' @param y vector with the time series
 #' @param X matrix with regressors in the columns
-#' @param maxsum maximum sum of additional level variances
+#' @param maxsum maximum sum of additional level standard deviations;
 #' @param edf boolean if TRUE computes effective degrees of freedom otherwise computes
 #' the number of degrees of freedom in the LASSO-regression way.
 #' @param parinit either NULL or vector of 3+n parameters with starting values for the
@@ -175,7 +175,8 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
        weights = if (edf) w else NULL,
        ic = c(aic  = 2*(df - loglik),
               aicc = 2*(df*n/(n-df-1) - loglik),
-              bic  = log(df)*n - 2*loglik,
+              # bic  = log(df)*n - 2*loglik,
+              bic  = df*log(n) - 2*loglik,
               hq   = 2*(log(log(n))*df - loglik)),
        smoothed_level = (a1 + p11*r1 + p12*r2)[-(n+1)],
        var_smoothed_level = (p11 - p11*p11*n11 - 2*p11*p12*n12 - p12*p12*n22)[-(n+1)]
