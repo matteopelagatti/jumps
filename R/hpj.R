@@ -31,8 +31,9 @@
 #'  \item xreg: matrix of regressors;
 #'  \item df: model's degrees of freedom;
 #'  \item loglik: value of the log-likelihood at maximum;
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq).
+#'  \item ic: vector of information criteria (aic, aicc, bic, hq);
 #'  \item opt: the output of the optimization function (nloptr);
+#'  \item call: the call to the function.
 #' }
 #' @examples 
 #' set.seed(202311)
@@ -189,10 +190,14 @@ print.hpj <- function(x, ...) {
   cat("  BIC  = ", x$ic[3], "\n", sep = "")
   cat("  HQ   = ", x$ic[4], "\n", sep = "")
   cat("Break dates:")
-  M <- as.matrix(as.character(time(x$y)[x$breaks]))
-  rownames(M) <- 1:length(x$breaks)
-  colnames(M) <- ""
-  print(M, quote = FALSE)
+  if (length(x$breaks) == 0) {
+    cat("  no breaks were detected\n")
+  } else {
+    M <- as.matrix(as.character(time(x$y)[x$breaks]))
+    rownames(M) <- 1:length(x$breaks)
+    colnames(M) <- ""
+    print(M, quote = FALSE)
+  }
 }
 
 #' logLik method for the class hpj

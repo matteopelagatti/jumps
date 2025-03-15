@@ -39,8 +39,9 @@ are available.
  \item xreg: matrix of regressors;
  \item df: model's degrees of freedom;
  \item loglik: value of the log-likelihood at maximum;
- \item ic: vector of information criteria (aic, aicc, bic, hq).
+ \item ic: vector of information criteria (aic, aicc, bic, hq);
  \item opt: the output of the optimization function (nloptr);
+ \item call: the call to the function.
 }}
 }
 \description{
