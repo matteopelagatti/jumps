@@ -3,7 +3,12 @@ Type: Package
 Title: Hodrick-Prescott Filter with Jumps
 Version: 1.0
 Date: 2024-03-18
-Author: Matteo Pelagatti, Paolo Maranzano
+Authors@R: c(
+    person("Matteo", "Pelagatti", , "matteo.pelagatti@unimib.it", role = c("aut","cre","cph"),
+		   comment = c(ORCID = "0000-0002-1860-7535")),
+    person("Paolo", "Maranzano", , "pmaranzano.ricercastatistica@gmail.com", role = c("aut","cph"),
+           comment = c(ORCID = "0000-0002-9228-2759"))
+  )
 Maintainer: Matteo Pelagatti <matteo.pelagatti@unimib.it>
 Description: Extraction of a smooth trend with automatically selected jumps.
 License: GPL-3 + file LICENSE
