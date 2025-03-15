@@ -1,13 +1,13 @@
 #' Dataset: employed_IT
 #'
 #' A dataset containing the quarterly time series of employed
-#' people by age class in Italy in the time span 1993Q1-2023Q4.
+#' people by age class in Italy in the time span 1992Q4-2023Q4.
 #'
 #' @docType data
 #' 
 #' @usage employed_IT
 #' 
-#' @format A data frame with 124 rows and 11 variables:
+#' @format A data frame with 125 rows and 11 variables:
 #' \describe{
 #'   \item{time}{date in Date format}
 #'   \item{Y15.24}{Thousand of employed in the age class 15-24}
