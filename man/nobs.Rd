@@ -4,10 +4,12 @@
 \alias{nobs.hpj}
 \title{nobs method for the class hpj}
 \usage{
-\method{nobs}{hpj}(object)
+\method{nobs}{hpj}(object, ...)
 }
 \arguments{
 \item{object}{an object of class hpj;}
+
+\item{...}{not used: for consistency with generic function.}
 }
 \description{
 nobs method for the class hpj

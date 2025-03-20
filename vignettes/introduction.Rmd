@@ -1,5 +1,5 @@
 ---
-title: "Introduction to the *jumps* package"
+title: "Introduction to the jumps package"
 date: "Version: 2025-03-16"
 output: rmarkdown::html_vignette
 vignette: >
@@ -98,8 +98,8 @@ plot(hpj_nile, use_ggplot = FALSE, main = "Nile river flow")
 
 ```{r warning=FALSE, message=FALSE, fig.width=5}
 data("employed_IT")
-y <- ts(employed_IT[66:124, "Y25.29"]/1000, start = 2009, frequency = 4)
-hpj_emp <- hpj(y)
+y <- (employed_IT[, "Y25.29"]) |> window(start = c(2009, 1))
+hpj_emp <- hpj(y, scl = "original")
 
 print(hpj_emp)
 plot(hpj_emp, main = "Millions of employed in Italy: age 25-29")

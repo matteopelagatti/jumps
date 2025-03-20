@@ -9,7 +9,8 @@ hpj(
   maxsum = NULL,
   lambda = NULL,
   xreg = NULL,
-  ic = c("bic", "hq", "aic", "aicc")
+  ic = c("bic", "hq", "aic", "aicc"),
+  scl = 1000
 )
 }
 \arguments{
@@ -25,7 +26,12 @@ if \code{NULL} the value is estimated by maximum likelihood;}
 
 \item{ic}{string with information criterion for the automatic choice of \code{maxsum}:
 the default is "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available.
+are available.}
+
+\item{scl}{scaling factor for the time series (default is 1000): the time series
+is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
+starting values for the optimization seem to work well in this scale).
+If `scl` is set equal to the string `"original"` the time series is not rescaled.
 
 #' @return S3 object of class hpj with the following slots:
 \itemize{

@@ -4,10 +4,12 @@
 \alias{logLik.hpj}
 \title{logLik method for the class hpj}
 \usage{
-\method{logLik}{hpj}(object)
+\method{logLik}{hpj}(object, ...)
 }
 \arguments{
 \item{object}{an object of class hpj;}
+
+\item{...}{not used: for consistency with generic function.}
 }
 \description{
 logLik method for the class hpj

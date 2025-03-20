@@ -1,6 +1,7 @@
 useDynLib(jumps, .registration=TRUE)
 importFrom(Rcpp, evalCpp)
-importFrom("stats", "sd", "var", "qnorm", "logLik", "AIC", "BIC", "time")
+importFrom("stats", "sd", "var", "qnorm", "logLik", "AIC", "BIC",
+           "time", "ts", "nobs")
 importFrom("nloptr", "nloptr")
 importFrom("graphics", "abline", "lines")
 export("llt")

@@ -18,6 +18,10 @@
 #' @param ic string with information criterion for the automatic choice of \code{maxsum}:
 #' the default is "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
 #' are available.
+#' @param scl scaling factor for the time series (default is 1000): the time series
+#' is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
+#' starting values for the optimization seem to work well in this scale).
+#' If `scl` is set equal to the string `"original"` the time series is not rescaled.
 #' 
 #' #' @return S3 object of class hpj with the following slots:
 #' \itemize{
@@ -43,12 +47,13 @@
 #' hp <- hpj(y, 50)
 #' plot(hp)
 #' @export
-hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL, ic = c("bic", "hq", "aic", "aicc")) {
+hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
+                ic = c("bic", "hq", "aic", "aicc"), scl = 1000) {
+  if (scl == "original") scl <- max(y) - min(y)
   y_num <- as.numeric(y)
   y_min <- min(y_num)
   y_max <- max(y_num)
   y_rng <- y_max - y_min
-  scl <- 1000 # scaling factor
   y_scl <- (y_num - y_min) / y_rng * scl # rescaled y
   if (!is.null(xreg)) {
     stop("xreg is not supported yet")
@@ -203,10 +208,11 @@ print.hpj <- function(x, ...) {
 #' logLik method for the class hpj
 #' 
 #' @param object an object of class hpj;
+#' @param ... not used: for consistency with generic function.
 #' @rdname logLik
 #' @exportS3Method base::logLik
 #' @export
-logLik.hpj <- function(object) {
+logLik.hpj <- function(object, ...) {
   structure(
     object$loglik,
     class = "logLik",
@@ -218,10 +224,11 @@ logLik.hpj <- function(object) {
 #' nobs method for the class hpj
 #' 
 #' @param object an object of class hpj;
+#' @param ... not used: for consistency with generic function.
 #' @rdname nobs
 #' @exportS3Method base::nobs
 #' @export
-nobs.hpj <- function(object) {
+nobs.hpj <- function(object, ...) {
   sum(!is.na(object$y))
 }
 

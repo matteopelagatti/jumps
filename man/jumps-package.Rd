@@ -20,12 +20,3 @@ Maintainer: Matteo Pelagatti <matteo.pelagatti@unimib.it>, Paolo Maranzano <paol
   Maranzano and Pelagatti (2024) A Hodrick-Prescott filter with automatically selected jumps.
 }
 \keyword{ package }
-\seealso{
-  Optional links to other man pages
-}
-\examples{
-  \dontrun{
-     ## Optional simple examples of the most important functions
-     ## These can be in \dontrun{} and \donttest{} blocks.   
-  }
-}
