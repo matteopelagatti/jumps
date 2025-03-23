@@ -30,10 +30,11 @@ are available.}
 
 \item{scl}{scaling factor for the time series (default is 1000): the time series
 is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
-starting values for the optimization seem to work well in this scale).
-If `scl` is set equal to the string `"original"` the time series is not rescaled.
-
-#' @return S3 object of class hpj with the following slots:
+starting values for the optimization seem to work well in this scale);
+If `scl` is set equal to the string `"original"` the time series is not rescaled.}
+}
+\value{
+S3 object of class hpj with the following slots:
 \itemize{
  \item y: the input time series;
  \item maxsum: the maximum sum of additional standard deviations;
@@ -42,13 +43,14 @@ If `scl` is set equal to the string `"original"` the time series is not rescaled
  \item hpj: the time series of the HP filter with jumps;
  \item hpj_std: the time series of the HP filter with jumps standard deviations;
  \item std_devs: vector of additional standard deviations of the level disturbance;
+ \item breaks: vector of indices of the breaks;
  \item xreg: matrix of regressors;
  \item df: model's degrees of freedom;
  \item loglik: value of the log-likelihood at maximum;
  \item ic: vector of information criteria (aic, aicc, bic, hq);
  \item opt: the output of the optimization function (nloptr);
  \item call: the call to the function.
-}}
+}
 }
 \description{
 This function is a wrapper for the various Hodrick-Prescott filters with jumps functions.

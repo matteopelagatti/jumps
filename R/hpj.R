@@ -20,10 +20,10 @@
 #' are available.
 #' @param scl scaling factor for the time series (default is 1000): the time series
 #' is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
-#' starting values for the optimization seem to work well in this scale).
+#' starting values for the optimization seem to work well in this scale);
 #' If `scl` is set equal to the string `"original"` the time series is not rescaled.
 #' 
-#' #' @return S3 object of class hpj with the following slots:
+#' @returns S3 object of class hpj with the following slots:
 #' \itemize{
 #'  \item y: the input time series;
 #'  \item maxsum: the maximum sum of additional standard deviations;
@@ -32,6 +32,7 @@
 #'  \item hpj: the time series of the HP filter with jumps;
 #'  \item hpj_std: the time series of the HP filter with jumps standard deviations;
 #'  \item std_devs: vector of additional standard deviations of the level disturbance;
+#'  \item breaks: vector of indices of the breaks;
 #'  \item xreg: matrix of regressors;
 #'  \item df: model's degrees of freedom;
 #'  \item loglik: value of the log-likelihood at maximum;
@@ -114,7 +115,8 @@ hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
 #' @param main title of the plot;
 #' @param use_ggplot logical, if \code{TRUE} the plot is done with ggplot2;
 #' @param ... additional arguments passed to the plot function (if no ggplot2 is used).
-#' @return If \code{use_ggplot} is \code{TRUE} a ggplot object is returned, otherwise a base plot is shown.
+#' @returns If \code{use_ggplot} is \code{TRUE} a ggplot object is returned, otherwise
+#' a base plot is shown and nothing is returned.
 #' @rdname plot
 #' @exportS3Method base::plot
 #' @export
@@ -174,6 +176,7 @@ plot.hpj <- function(x, prob = NULL, show_breaks = TRUE, main = "original + filt
 #' 
 #' @param x an object of class hpj;
 #' @param ... not used: for consistency with generic function.
+#' @returns No return value, called for side effects
 #' @rdname print
 #' @exportS3Method base::print
 #' @export
@@ -209,6 +212,9 @@ print.hpj <- function(x, ...) {
 #' 
 #' @param object an object of class hpj;
 #' @param ... not used: for consistency with generic function.
+#' @returns An object of logLik class with the log-likelihood value and two
+#' attributes: df, the number of degrees of freedom, and nobs, the number of
+#' observations.
 #' @rdname logLik
 #' @exportS3Method base::logLik
 #' @export
@@ -225,6 +231,8 @@ logLik.hpj <- function(object, ...) {
 #' 
 #' @param object an object of class hpj;
 #' @param ... not used: for consistency with generic function.
+#' @returns The number of (non missing) observations of the time series on
+#' which the HP filter with jumps has been applied.
 #' @rdname nobs
 #' @exportS3Method base::nobs
 #' @export
@@ -235,7 +243,12 @@ nobs.hpj <- function(object, ...) {
 #' BIC method for the class hpj
 #' 
 #' @param object an object of class hpj;
-#' @param ... additional objects of class hpj;
+#' @param ... additional objects of class hpj.
+#' @returns If just one object is provided,
+#' a numeric value with the corresponding BIC.
+#' If multiple objects are provided, a data.frame with rows corresponding to
+#' the objects and columns representing the number of parameters in the
+#' model (df) and the BIC.
 #' @rdname BIC
 #' @exportS3Method base::BIC
 #' @export

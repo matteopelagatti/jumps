@@ -1,5 +1,8 @@
 #' HP filter with automatic jumps detection and fixed smoothing constant
 #' 
+#' This is the lower-level function for the HP filter with jumps with fixed smoothing
+#' parameter. The user should use the \code{hpj} function instead, unless in need of
+#' more control and speed. The function estimates the HP filter with jumps.
 #' Jumps happen contextually in the level and in the slope: the standard deviation
 #' of the slope disturbance is \eqn{\gamma} times the standard deviation of the
 #' level disturbance at time \eqn{t}.
@@ -189,9 +192,9 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' 
 #' The regularization constant for the HP filter with jumps is the
 #' maximal sum of standard deviations for the level disturbance. This value
-#' has to be passed to the \code{hpfj_fix} function. The \code{auto_hpfj_fix}
-#' runs \code{hpfj_fix} on a grid of regularizatoin constants and returns the
-#' relative information criteria for selecting the optimal constant.
+#' has to be passed to the \code{hpfj_fix} function. The function \code{auto_hpfj_fix}
+#' runs \code{hpfj_fix} on a grid of regularization constants and returns the
+#' output of \code{hpfj_fix} according to the chosen information criterion.
 #' 
 #' @param y numeric vector cotaining the time series;
 #' @param lambda smoothing constant;

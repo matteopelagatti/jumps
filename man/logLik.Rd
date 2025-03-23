@@ -11,6 +11,11 @@
 
 \item{...}{not used: for consistency with generic function.}
 }
+\value{
+An object of logLik class with the log-likelihood value and two
+attributes: df, the number of degrees of freedom, and nobs, the number of
+observations.
+}
 \description{
 logLik method for the class hpj
 }

@@ -36,9 +36,9 @@ choice according to the selected information criterion.
 \description{
 The regularization constant for the HP filter with jumps is the
 maximal sum of standard deviations for the level disturbance. This value
-has to be passed to the \code{hpfj_fix} function. The \code{auto_hpfj_fix}
-runs \code{hpfj_fix} on a grid of regularizatoin constants and returns the
-relative information criteria for selecting the optimal constant.
+has to be passed to the \code{hpfj_fix} function. The function \code{auto_hpfj_fix}
+runs \code{hpfj_fix} on a grid of regularization constants and returns the
+output of \code{hpfj_fix} according to the chosen information criterion.
 }
 \examples{
 mod <- auto_hpfj_fix(Nile, "annual")

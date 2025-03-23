@@ -1,11 +1,21 @@
-#' HP filter with jumps and regressors
+#' HP filter with jumps and regressors (still experimental)
 #'
+#' This function needs more testing since it does not seem to work as expected.
+#' For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
+#' This is the same as \code{hpfj} but with the possibility of including regressors.
+#' The regressors should be zero-mean so that the HP filter can be interpreted as
+#' a mean value of the time series. 
 #' Jumps happen contextually in the level and in the slope: the standard deviation
 #' of the slope disturbance is \eqn{\gamma} times the standard deviation of the
 #' level disturbance at time \eqn{t}.
 #' The HP smoothing parameter \eqn{\lambda} is estimated via MLE (assuming normally
 #' distributed disturbances) as in Wahba (1978):
 #' \eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
+#' 
+#' @references Whaba (1978)
+#' "Improper priors, spline smoothing and the problem of guarding against model errors in regression",
+#' *Journal of the Royal Statistical Society. Series B*, Vol. 40(3), pp. 364-372.
+#' DOI:10.1111/j.2517-6161.1978.tb01050.x
 #' 
 #' @param y vector with the time series
 #' @param X matrix with regressors in the columns
@@ -185,11 +195,13 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 
 #' Automatic selection of the optimal HP filter with jumps and regressors
 #' 
+#' This function needs more testing since it does not seem to work as expected.
+#' For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
 #' The regularization constant for the HP filter with jumps is the
 #' maximal sum of standard deviations for the level disturbance. This value
-#' has to be passed to the \code{hpfj} function. The \code{autohpfj} runs
-#' \code{hpfj} on a grid of regularizatoin constants and returns the relative
-#' information criteria for selecting the optimal constant.
+#' has to be passed to the \code{hpfjx} function. The \code{auto_hpfjx} runs
+#' \code{hpfjx} on a grid of regularization constants and returns the output
+#' of \code{hpfjx} selected by the chosen information criterion.
 #' 
 #' @param y numeric vector cotaining the time series;
 #' @param X numeric matrix with regressors in the columns;

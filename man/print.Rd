@@ -11,6 +11,9 @@
 
 \item{...}{not used: for consistency with generic function.}
 }
+\value{
+No return value, called for side effects
+}
 \description{
 Print method for the class hpj
 }

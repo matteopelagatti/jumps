@@ -98,7 +98,7 @@ plot(hpj_nile, use_ggplot = FALSE, main = "Nile river flow")
 
 ```{r warning=FALSE, message=FALSE, fig.width=5}
 data("employed_IT")
-y <- (employed_IT[, "Y25.29"]) |> window(start = c(2009, 1))
+y <- window(employed_IT[, "Y25.29"], start = c(2009, 1))
 hpj_emp <- hpj(y, scl = "original")
 
 print(hpj_emp)

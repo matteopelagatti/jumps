@@ -37,6 +37,9 @@ list with the following slots:
 }
 }
 \description{
+This is the lower-level function for the HP filter with jumps with fixed smoothing
+parameter. The user should use the \code{hpj} function instead, unless in need of
+more control and speed. The function estimates the HP filter with jumps.
 Jumps happen contextually in the level and in the slope: the standard deviation
 of the slope disturbance is \eqn{\gamma} times the standard deviation of the
 level disturbance at time \eqn{t}.

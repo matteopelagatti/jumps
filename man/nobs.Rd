@@ -11,6 +11,10 @@
 
 \item{...}{not used: for consistency with generic function.}
 }
+\value{
+The number of (non missing) observations of the time series on
+which the HP filter with jumps has been applied.
+}
 \description{
 nobs method for the class hpj
 }

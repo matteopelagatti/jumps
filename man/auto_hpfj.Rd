@@ -26,15 +26,15 @@ should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
 to a more traditional way (although not supported by theory) when FALSE.}
 }
 \value{
-The ouput of the \code{hpjf} function corresponding to the best
+The same ouput as the \code{hpjf} function corresponding to the best
 choice according to the selected information criterion.
 }
 \description{
 The regularization constant for the HP filter with jumps is the
 maximal sum of standard deviations for the level disturbance. This value
-has to be passed to the \code{hpfj} function. The \code{autohpfj} runs
-\code{hpfj} on a grid of regularizatoin constants and returns the relative
-information criteria for selecting the optimal constant.
+has to be passed to the \code{hpfj} function. The \code{auto_hpfj} runs
+\code{hpfj} on a grid of regularization constants and returns the output
+of \code{hpfj} selected by the chosen information criterion.
 }
 \examples{
 mod <- auto_hpfj(Nile)

@@ -1,11 +1,19 @@
 #' HP filter with automatic jumps detection.
 #' 
+#' This is the lower-level function for the HP filter with jumps.
+#' The user should use the \code{hpj} function instead, unless in need of more control
+#' and speed. The function estimates the HP filter with jumps.
 #' Jumps happen contextually in the level and in the slope: the standard deviation
 #' of the slope disturbance is \eqn{\gamma} times the standard deviation of the
 #' level disturbance at time \eqn{t}.
 #' The HP smoothing parameter \eqn{\lambda} is estimated via MLE (assuming normally
 #' distributed disturbances) as in Wahba (1978):
 #' \eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
+#' 
+#' @references Whaba (1978)
+#' "Improper priors, spline smoothing and the problem of guarding against model errors in regression",
+#' *Journal of the Royal Statistical Society. Series B*, Vol. 40(3), pp. 364-372.
+#' DOI:10.1111/j.2517-6161.1978.tb01050.x
 #' 
 #' @param y vector with the time series;
 #' @param maxsum maximum sum of additional level standard deviations;
@@ -173,9 +181,9 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' 
 #' The regularization constant for the HP filter with jumps is the
 #' maximal sum of standard deviations for the level disturbance. This value
-#' has to be passed to the \code{hpfj} function. The \code{autohpfj} runs
-#' \code{hpfj} on a grid of regularizatoin constants and returns the relative
-#' information criteria for selecting the optimal constant.
+#' has to be passed to the \code{hpfj} function. The \code{auto_hpfj} runs
+#' \code{hpfj} on a grid of regularization constants and returns the output
+#' of \code{hpfj} selected by the chosen information criterion.
 #' 
 #' @param y numeric vector cotaining the time series;
 #' @param grid numeric vector containing the grid for the argument \code{maxsum}
@@ -187,7 +195,7 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #' should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
 #' to a more traditional way (although not supported by theory) when FALSE.
 #' 
-#' @returns The ouput of the \code{hpjf} function corresponding to the best
+#' @returns The same ouput as the \code{hpjf} function corresponding to the best
 #' choice according to the selected information criterion.
 #' 
 #' @examples

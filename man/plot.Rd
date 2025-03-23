@@ -27,7 +27,8 @@
 \item{...}{additional arguments passed to the plot function (if no ggplot2 is used).}
 }
 \value{
-If \code{use_ggplot} is \code{TRUE} a ggplot object is returned, otherwise a base plot is shown.
+If \code{use_ggplot} is \code{TRUE} a ggplot object is returned, otherwise
+a base plot is shown and nothing is returned.
 }
 \description{
 Plot method for the class hpj
