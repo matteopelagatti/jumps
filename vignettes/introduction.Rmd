@@ -42,7 +42,8 @@ The function returns an object of class `hpj`, which is a list with the followin
 - `y` the input time series;
 - `maxsum` the maximum sum of additional standard deviations;
 - `lambda` the smoothing constant of the HP filter;
-- `pars` vector of estimated parameters (sigma_slope, sigma_noise, gamma);- hpj: the time series of the HP filter with jumps;
+- `pars` vector of estimated parameters (sigma_slope, sigma_noise, gamma);
+- `hpj`: the time series of the HP filter with jumps;
 - `hpj_std` the time series of the HP filter with jumps standard deviations;
 - `std_devs` vector of additional standard deviations of the level disturbance;
 - `xreg` matrix of regressors;
