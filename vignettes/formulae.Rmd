@@ -1,5 +1,6 @@
 ---
 title: "Formulae"
+date: "Version: 2025-03-16"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Formulae}
@@ -12,10 +13,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-```
-
-```{r setup}
-library(jumps)
 ```
 
 # Introduction
@@ -226,3 +223,59 @@ $$
 $$
 
 ## Analytical scores
+
+The log-likelihood must be maximised with respect to a very large number of parameters ($n+3$). Thus, providing the numerical optimiser with analytical scores is important for stability and speed.
+Since all of our parameters are related to quantities in the disturbance covariance matrices, we can adapt the results in Koopman and Shephard (1992, Biometrika vol. 79).
+
+Recall that our (slightly re-parametrised) model is
+$$
+\begin{aligned}
+    y_t &= \alpha^{(1)}_t + \varepsilon_t,
+    &\varepsilon_t \sim NID (0, \sigma_\varepsilon^2) \\
+    \alpha^{(1)}_{t+1} &= \alpha^{(1)}_t + \alpha^{(2)}_t + \eta_t,
+    &\eta_t \sim NID (0, \sigma^2_t) \\
+    \alpha^{(2)}_{t+1} &= \alpha^{(2)}_t + \zeta_t,
+    &\zeta_t \sim NID (0, \sigma^2 + \gamma^2 \sigma^2_t)
+\end{aligned}
+$$
+where the parameters to estimate are $\sigma_\varepsilon$, $\sigma$, $\gamma$, and the sequence $\{\sigma_t\}_{t=1,\ldots,n}$, which are all non-negative. Notice that in this parametrisation $\lambda = \sigma_\varepsilon^2 / \sigma^2$.
+
+### $\lambda$ free
+
+If $\lambda$ is not fixed and $\ell(\boldsymbol{\theta})$ represents the log-likelihood function, with $\boldsymbol\theta$ vector all of the parameters, then
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial \sigma_\varepsilon} &=
+  \sigma_\varepsilon \sum_{t=1}^n (e_t e_t - d_t)\\
+\frac{\partial \ell}{\partial \sigma} &= \sigma\sum_{t=1}^n (r^{(2)}_t r^{(2)}_t - n^{(22)}_t)\\
+\frac{\partial \ell}{\partial \gamma} &= \gamma\sum_{t=1}^n (r^{(2)}_t r^{(2)}_t - n^{(22)}_t) \sigma^2_t\\
+\frac{\partial \ell}{\partial \sigma_t} &= 
+\Big(r^{(1)}_t r^{(1)}_t - n^{(11)}_t + (r^{(2)}_t r^{(2)}_t - n^{(22)}_t)\gamma^2\Big)\sigma^2_t
+\end{aligned}
+$$
+
+Generally, constrained optimisation problems also need the derivatives of the constraining function, which in our case is $g(\boldsymbol{\theta}) = \sum_{t=1}^n \sigma_t$. The solution to the regularised maximum likelihood problem must satisfy $g(\boldsymbol{\theta}) \leq M$. The derivatives are trivial:
+$$
+\frac{\partial g}{\partial\sigma_\varepsilon} = 0, \;
+\frac{\partial g}{\partial\sigma} = 0, \;
+\frac{\partial g}{\partial\gamma} = 0, \;
+\frac{\partial g}{\partial\sigma_t} = 1.
+$$
+
+### $\lambda$ fixed
+If $\lambda$ is fixed, $\sigma^2_\varepsilon = \lambda\sigma^2$ and, in the log-likelihood function $\ell(\boldsymbol{\theta})$, the vector of parameters $\boldsymbol\theta$ does not contain $\lambda$ or $\sigma^2_\varepsilon$. The derivatives are now
+$$
+\begin{aligned}
+\frac{\partial \ell}{\partial \sigma} &=
+\sigma\sum_{t=1}^n (r^{(2)}_t r^{(2)}_t - n^{(22)}_t) - \sigma\lambda\sum_{t=1}^n (e_t e_t - d_t) \\
+\frac{\partial \ell}{\partial \gamma} &= \gamma\sum_{t=1}^n (r^{(2)}_t r^{(2)}_t - n^{(22)}_t )\sigma_t\\
+\frac{\partial \ell}{\partial \sigma_t} &= 
+\Big(r^{(1)}_t r^{(1)}_t - n^{(11)}_t + (r^{(2)}_t r^{(2)}_t - n^{(22)}_t)\gamma^2\Big)\sigma^2_t
+\end{aligned}
+$$
+The derivatives of the constraining function are
+$$
+\frac{\partial g}{\partial\sigma} = 0, \;
+\frac{\partial g}{\partial\gamma} = 0, \;
+\frac{\partial g}{\partial\sigma_t} = 1.
+$$
