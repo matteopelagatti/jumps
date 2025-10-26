@@ -33,11 +33,13 @@ The ouput of the \code{hpjf} function corresponding to the best
 choice according to the selected information criterion.
 }
 \description{
+This function needs more testing since it does not seem to work as expected.
+For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
 The regularization constant for the HP filter with jumps is the
 maximal sum of standard deviations for the level disturbance. This value
-has to be passed to the \code{hpfj} function. The \code{autohpfj} runs
-\code{hpfj} on a grid of regularizatoin constants and returns the relative
-information criteria for selecting the optimal constant.
+has to be passed to the \code{hpfjx} function. The \code{auto_hpfjx} runs
+\code{hpfjx} on a grid of regularization constants and returns the output
+of \code{hpfjx} selected by the chosen information criterion.
 }
 \examples{
 y <- log(AirPassengers)

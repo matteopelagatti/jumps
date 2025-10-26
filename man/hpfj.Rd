@@ -7,16 +7,16 @@
 hpfj(y, maxsum = sd(y), edf = TRUE, parinit = NULL)
 }
 \arguments{
-\item{y}{vector with the time series}
+\item{y}{vector with the time series;}
 
-\item{maxsum}{maximum sum of additional level variances}
+\item{maxsum}{maximum sum of additional level standard deviations;}
 
 \item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
-the number of degrees of freedom in the LASSO-regression way.}
+the number of degrees of freedom in the LASSO-regression way;}
 
 \item{parinit}{either NULL or vector of 3+n parameters with starting values for the
 optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-square root of gamma, n additional std deviations for the slope}
+square root of gamma, n additional std deviations for the slope.}
 }
 \value{
 list with the following slots:
@@ -31,6 +31,9 @@ list with the following slots:
 }
 }
 \description{
+This is the lower-level function for the HP filter with jumps.
+The user should use the \code{hpj} function instead, unless in need of more control
+and speed. The function estimates the HP filter with jumps.
 Jumps happen contextually in the level and in the slope: the standard deviation
 of the slope disturbance is \eqn{\gamma} times the standard deviation of the
 level disturbance at time \eqn{t}.
@@ -47,4 +50,10 @@ plot(y, type = "l")
 lines(mu, col = "blue")
 hp <- hpfj(y, 60)
 lines(hp$smoothed_level, col = "red")
+}
+\references{
+Whaba (1978)
+"Improper priors, spline smoothing and the problem of guarding against model errors in regression",
+*Journal of the Royal Statistical Society. Series B*, Vol. 40(3), pp. 364-372.
+DOI:10.1111/j.2517-6161.1978.tb01050.x
 }

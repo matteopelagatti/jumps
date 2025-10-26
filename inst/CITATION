@@ -1,0 +1,11 @@
+bibentry(
+  bibtype  = "Article",
+  title    = "A Hodrick-Prescott filter with automatically selected jumps",
+  author   = "Maranzano P. and Pelagatti M.",
+  journal  = "FEEM Working Paper",
+  year     = "2024",
+  volume   = "18",
+  number   = "2024",
+  pages    = "1--48",
+  doi      = "10.2139/ssrn.4896170"
+)
