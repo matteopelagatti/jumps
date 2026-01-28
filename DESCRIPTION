@@ -1,7 +1,7 @@
 Package: jumps
 Type: Package
 Title: Hodrick-Prescott Filter with Jumps
-Version: 1.0
+Version: 1.0.0.9000
 Date: 2025-03-20
 Authors@R: c(
     person("Matteo", "Pelagatti", , "matteo.pelagatti@unimib.it", role = c("aut","cre","cph"),
