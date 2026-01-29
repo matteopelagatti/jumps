@@ -20,7 +20,7 @@ Imports: Rcpp (>= 1.0.10),
          stats,
          nloptr
 LinkingTo: Rcpp
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Suggests: 
     knitr,
     rmarkdown,

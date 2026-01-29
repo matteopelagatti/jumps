@@ -93,3 +93,7 @@ llt <- function(y, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p
     .Call(`_jumps_llt`, y, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_)
 }
 
+llt_delta <- function(y, delta, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_ = NULL) {
+    .Call(`_jumps_llt_delta`, y, delta, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_)
+}
+

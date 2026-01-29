@@ -56,10 +56,44 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// llt_delta
+double llt_delta(NumericVector y, NumericVector delta, NumericVector var_eps, NumericVector var_eta, NumericVector var_zeta, NumericVector cov_eta_zeta, NumericVector a1, NumericVector a2, NumericVector p11, NumericVector p12, NumericVector p22, NumericVector k1, NumericVector k2, NumericVector i, NumericVector f, NumericVector r1, NumericVector r2, NumericVector n11, NumericVector n12, NumericVector n22, NumericVector e, NumericVector d, Nullable<NumericVector> w_);
+RcppExport SEXP _jumps_llt_delta(SEXP ySEXP, SEXP deltaSEXP, SEXP var_epsSEXP, SEXP var_etaSEXP, SEXP var_zetaSEXP, SEXP cov_eta_zetaSEXP, SEXP a1SEXP, SEXP a2SEXP, SEXP p11SEXP, SEXP p12SEXP, SEXP p22SEXP, SEXP k1SEXP, SEXP k2SEXP, SEXP iSEXP, SEXP fSEXP, SEXP r1SEXP, SEXP r2SEXP, SEXP n11SEXP, SEXP n12SEXP, SEXP n22SEXP, SEXP eSEXP, SEXP dSEXP, SEXP w_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type y(ySEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type var_eps(var_epsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type var_eta(var_etaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type var_zeta(var_zetaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type cov_eta_zeta(cov_eta_zetaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type a1(a1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type a2(a2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type p11(p11SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type p12(p12SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type p22(p22SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type k1(k1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type k2(k2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type i(iSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type f(fSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type r1(r1SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type r2(r2SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type n11(n11SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type n12(n12SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type n22(n22SEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type e(eSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type d(dSEXP);
+    Rcpp::traits::input_parameter< Nullable<NumericVector> >::type w_(w_SEXP);
+    rcpp_result_gen = Rcpp::wrap(llt_delta(y, delta, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_jumps_da", (DL_FUNC) &_jumps_da, 5},
     {"_jumps_llt", (DL_FUNC) &_jumps_llt, 22},
+    {"_jumps_llt_delta", (DL_FUNC) &_jumps_llt_delta, 23},
     {NULL, NULL, 0}
 };
 
