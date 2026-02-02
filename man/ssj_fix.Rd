@@ -9,7 +9,7 @@ ssj_fix(
   y,
   x,
   lambda,
-  maxsum = sd(y),
+  maxsum = sd(y, na.rm = TRUE),
   edf = TRUE,
   parinit = NULL,
   last_delta = 1
@@ -52,8 +52,6 @@ This is the lower-level function for the smooting splines with jumps and fixed
 smoothing parameter.
 }
 \examples{
-# example code
-
 plot(faithful$eruptions, faithful$waiting)
 of_jum <- ssj_fix(y = faithful$waiting,
                   x = faithful$eruptions,
@@ -61,4 +59,5 @@ of_jum <- ssj_fix(y = faithful$waiting,
                   maxsum = 150)
 lines(x = sort(faithful$eruptions),
       y = of_jum$smoothed_level, col = "red", lwd = 2)
+      
 }

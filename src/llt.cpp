@@ -265,7 +265,7 @@ using namespace Rcpp;
        p12[t+1] = p12[t] + delta[t]*p22[t] + cov_eta_zeta[t] - k1[t]*k2[t]*f[t];
        p22[t+1] = p22[t] + var_zeta[t] - k2[t]*k2[t]*f[t];
      }
-     if (t < n-1) { // CAMBIARE: n-1 -> n-2? mettendo meno di n-1 non funziona
+     if (t < n-1) {
        if (NumericVector::is_na(y[t+1])) { // in case of missing y[t+1]
          // innovation
          i[t+1] = 0;

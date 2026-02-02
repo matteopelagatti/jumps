@@ -28,8 +28,6 @@
 #' }
 #' 
 #' @examples
-#' # example code
-#' 
 #' plot(faithful$eruptions, faithful$waiting)
 #' of_jum <- ssj_fix(y = faithful$waiting,
 #'                   x = faithful$eruptions,
@@ -37,8 +35,9 @@
 #'                   maxsum = 150)
 #' lines(x = sort(faithful$eruptions),
 #'       y = of_jum$smoothed_level, col = "red", lwd = 2)
+#'       
 #' @export
-ssj_fix <- function(y, x, lambda, maxsum = sd(y),
+ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
                     edf = TRUE, parinit = NULL, last_delta = 1) {
   n <- length(y)
   n1 <- n+1
@@ -136,11 +135,11 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y),
     inits <- parinit
   }
   ## Check on starting values
-  # lb <- c(0, 0, rep(0, n))
+  # lb <- c(0.0000000001, rep(0, n))
   quasizero <- sdy*1.0e-9
   lb <- c(quasizero, rep(0, n)) # lower bound
-  inits[inits < lb] <- lb[inits < lb]      # fix to lower bound those that are zerO
-  
+  inits[inits < lb] <- lb[inits < lb]      # make init coherent with lower bound
+
   ## Optimization with CCSA ("conservative convex separable approximation")
   # see https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
   opt <- nloptr::nloptr(x0 = inits,
@@ -214,7 +213,7 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y),
 #' 
 #' @export
 auto_ssj_fix <- function(y, x, lambda,
-                         grid = seq(0, sd(y)*10, sd(y)/10),
+                         grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x))*10, sd(y, na.rm = TRUE)/mean(diff(x))/10),
                          ic = c("bic", "hq", "aic", "aicc"),
                          edf = TRUE, last_delta = 1) {
   ic <- match.arg(ic)
