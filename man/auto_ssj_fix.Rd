@@ -9,7 +9,8 @@ auto_ssj_fix(
   y,
   x,
   lambda,
-  grid = seq(0, sd(y) * 10, sd(y)/10),
+  grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
+    TRUE)/mean(diff(x))/10),
   ic = c("bic", "hq", "aic", "aicc"),
   edf = TRUE,
   last_delta = 1
