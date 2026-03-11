@@ -138,8 +138,8 @@ plot.hpj <- function(x, prob = NULL, show_breaks = TRUE, main = "original + filt
       ggplot2::ggtitle(main)
     if (!is.null(prob)) {
       gg <- gg +
-        ggplot2::geom_ribbon(ggplot2::aes(ymax = filtered - qnorm((1-prob)/2)*x$hpj_std,
-                        ymin = filtered + qnorm((1-prob)/2)*x$hpj_std),
+        ggplot2::geom_ribbon(ggplot2::aes(ymax = filtered + qnorm((1-prob)/2)*x$hpj_std,
+                        ymin = filtered - qnorm((1-prob)/2)*x$hpj_std),
                         fill = "red", alpha = 0.1)
     }
     if (show_breaks & length(x$breaks)) {
