@@ -9,7 +9,7 @@ ssj_fix(
   y,
   x,
   lambda,
-  maxsum = sd(y, na.rm = TRUE),
+  maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   edf = TRUE,
   parinit = NULL,
   last_delta = 1
