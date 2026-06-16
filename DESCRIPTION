@@ -18,9 +18,9 @@ Description: A set of functions to compute the Hodrick-Prescott (HP)
 License: GPL-3
 Imports: Rcpp (>= 1.0.10),
          stats,
-         nloptr,
-         datasets
-LinkingTo: Rcpp
+         nloptr
+LinkingTo: Rcpp,
+           RcppEigen
 RoxygenNote: 7.3.3
 Suggests: 
     knitr,

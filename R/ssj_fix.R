@@ -1,7 +1,7 @@
 #' Smoothing splines with with automatic jumps detection and
 #' fixed smoothing parameter
 #' 
-#' This is the lower-level function for the smooting splines with jumps and fixed
+#' This is the lower-level function for the smoothing splines with jumps and fixed
 #' smoothing parameter. 
 #' 
 #' @param y vector with the y (missing values allowed).
@@ -19,11 +19,11 @@
 #' \itemize{
 #'  \item opt: the output of the optimization function (nloptr)
 #'  \item nobs: number of observations
-#'  \item df: number of estimated parameters (model's degrees of freedom)
+#'  \item df: model's degrees of freedom
 #'  \item loglik: value of the log-likelihood at maximum
 #'  \item ic: vector of information criteria (aic, aicc, bic, hq)
-#'  \item smoothed_level: vector with smoothed level with jumps (hp filter with jumps)
-#'  \item var_smoothed_level: variance of the smoothed level
+#'  \item smoothed_level: vector with smoothing splines with jumps
+#'  \item var_smoothed_level: vector with variances of the smoothing splines
 #'  \item x: the ordered x variable
 #' }
 #' 
@@ -199,7 +199,9 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' @param edf logical scalar: TRUE (default) if the number of degrees of freedom
 #' should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
 #' to a more traditional way (although not supported by theory) when FALSE.
-#' 
+#' @param last_delta numeric scalar with the difference \eqn{x_{n+1}-x_{n}}; not
+#' relevant for most applications and defaults to 1.
+#'
 #' @returns The ouput of the \code{ssj_fix} function corresponding to the best
 #' choice according to the selected information criterion.
 #' 
