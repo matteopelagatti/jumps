@@ -122,11 +122,26 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     obs_s      <- lambda * sum(e * e - d)   # dH_t/d(sigma) = 2*lambda*sigma
     grad_sigma <- sigma * (process_s + obs_s)
 
-    # Score w.r.t. gamma_t (t=1,...,n-1):
-    # dQ_t/d(gamma_t) = sigma^2 * [[tau_t^2, tau_t],[tau_t, 1]]
-    grad_gamma <- (sig2 / 2) * (rn1[1:(n-1)] * tau^2 +
-                                  2 * rn12[1:(n-1)] * tau +
-                                  rn2[1:(n-1)])
+    # Score w.r.t. gamma_t (t=1,...,n-1). Unlike sigma, gamma_t enters BOTH the
+    # process noise Q_t = sigma^2*Delta_t(tau_t) AND the transition matrix
+    # T_t = [[1,tau_t],[0,1]]; the plain Koopman-Shephard formula below (Qterm)
+    # only accounts for the Q_t-dependence. The T_t-dependence needs the extra
+    # smoothed cross-moment Cov(alpha_t,eta_t|y) = -P_t L_t' N_t Q_t, derived via
+    # the Fisher/Louis identity and verified against an exact (brute-force
+    # Gaussian) smoother; the Q_t / Q_t^{-1} factors cancel by the cyclic trace
+    # property, leaving Tterm purely in terms of quantities llt_delta already
+    # computes (no new recursion needed).
+    Qterm <- (sig2 / 2) * (rn1[1:(n-1)] * tau^2 +
+                             2 * rn12[1:(n-1)] * tau +
+                             rn2[1:(n-1)])
+
+    kk        <- 1 - k1[1:(n-1)]
+    alphahat2 <- a2[1:(n-1)] + p12[1:(n-1)] * r1[1:(n-1)] + p22[1:(n-1)] * r2[1:(n-1)]
+    PL21      <- p12[1:(n-1)] * (kk * n11[2:n] - k2[1:(n-1)] * n12[2:n]) +
+                 p22[1:(n-1)] * (tau * n11[2:n] + n12[2:n])
+    Tterm     <- alphahat2 * r1[2:n] - PL21
+
+    grad_gamma <- Qterm + Tterm
 
     list(
       objective = mloglik / nobs,

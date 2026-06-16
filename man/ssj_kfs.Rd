@@ -36,7 +36,7 @@ solution for warm-starting.}
 observation (does not affect the fit; default 1).}
 }
 \value{
-list with the following slots:
+list with slots:
 \itemize{
  \item opt: the output of the nloptr optimizer.
  \item nobs: number of observations.
@@ -56,10 +56,11 @@ Implements the state-space time-warping model described in the companion
 paper. The effective inter-observation interval \eqn{\tau_t = \delta_t +
 \gamma_t} replaces the fixed spacing in both the transition matrix and the
 process-noise covariance, so jump detection reduces to finding the optimal
-\eqn{\boldsymbol\gamma} by maximum likelihood. The analytical gradient of
+\eqn{\boldsymbol\gamma} by maximum likelihood.  The analytical gradient of
 the log-likelihood with respect to \eqn{\gamma_t} is obtained through the
 Koopman-Shephard (2003) score formula applied to the Kalman smoother output.
-The optimisation uses the gradient-based CCSAQ algorithm from NLopt.
+The optimisation is carried out with the gradient-based CCSAQ algorithm from
+the NLopt library.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)

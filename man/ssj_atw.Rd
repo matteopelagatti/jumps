@@ -29,9 +29,11 @@ ssj_atw(
 
 \item{tol}{tolerance for convergence (default 1e-4).}
 
-\item{learning_rate}{initial and fallback step size for the Barzilai-Borwein adaptive scheme (default 0.1).}
+\item{learning_rate}{initial and fallback step size for the Barzilai-Borwein
+adaptive scheme (default 0.1).}
 
-\item{gamma_init}{optional numeric vector of length n-1 with a warm-start value for gamma; ignored when its length does not match n-1.}
+\item{gamma_init}{optional numeric vector of length n-1 with a warm-start
+for gamma; ignored when its length does not match n-1.}
 }
 \value{
 list with the following slots:

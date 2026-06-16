@@ -28,9 +28,12 @@ solve_jump_spline_fast(
 
 \item{tol}{small positive number with tolerance for numerical convergence}
 
-\item{learning_rate}{positive number: initial and fallback step size for the Barzilai-Borwein adaptive scheme (default 0.1).}
+\item{learning_rate}{positive number: initial and fallback step size for the
+Barzilai-Borwein adaptive scheme (default 0.1).}
 
-\item{gamma_init}{optional numeric vector of length n-1 with a warm-start value for gamma; ignored (zero initialisation used) when its length differs from n-1.}
+\item{gamma_init}{optional numeric vector of length n-1 with a warm-start
+value for gamma; ignored (zero initialisation used) when its length differs
+from n-1.}
 }
 \value{
 A list with the following slots:
