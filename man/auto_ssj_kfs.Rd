@@ -38,8 +38,8 @@ The output of \code{ssj_kfs} corresponding to the best IC.
 }
 \description{
 Runs \code{ssj_kfs} over a grid of \code{maxsum} values and returns the
-solution with the lowest selected information criterion. Each grid point is
-warm-started from the previous optimum. The search stops early when the IC
+solution with the lowest selected information criterion.  Each grid point is
+warm-started from the previous optimum.  The search stops early when the IC
 increases for three consecutive grid values.
 }
 \examples{

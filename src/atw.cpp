@@ -30,6 +30,14 @@ inline Matrix2d inv2x2(const Matrix2d& M) {
 // Fuses the cumsum and threshold loops to avoid a separate sv[] allocation.
 void project_simplex_inplace(const VectorXd& v, double budget,
                               VectorXd& out, VectorXd& work) {
+  // budget <= 0: the only feasible point of {x >= 0, sum(x) <= budget} is 0.
+  // The general algorithm below relies on a *strict* inequality to find the
+  // threshold theta and never fires when budget == 0 exactly, leaving theta
+  // at its initial value of 0 and letting v.cwiseMax(0) through unconstrained.
+  if (budget <= 0.0) {
+    out.setZero();
+    return;
+  }
   if (v.sum() <= budget && (v.array() >= 0).all()) {
     out = v.cwiseMax(0.0);
     return;
