@@ -39,16 +39,16 @@ list with the following slots:
 \itemize{
  \item opt: the output of the optimization function (nloptr)
  \item nobs: number of observations
- \item df: number of estimated parameters (model's degrees of freedom)
+ \item df: model's degrees of freedom
  \item loglik: value of the log-likelihood at maximum
  \item ic: vector of information criteria (aic, aicc, bic, hq)
- \item smoothed_level: vector with smoothed level with jumps (hp filter with jumps)
- \item var_smoothed_level: variance of the smoothed level
+ \item smoothed_level: vector with smoothing splines with jumps
+ \item var_smoothed_level: vector with variances of the smoothing splines
  \item x: the ordered x variable
 }
 }
 \description{
-This is the lower-level function for the smooting splines with jumps and fixed
+This is the lower-level function for the smoothing splines with jumps and fixed
 smoothing parameter.
 }
 \examples{

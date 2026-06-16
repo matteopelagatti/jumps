@@ -33,6 +33,9 @@ are available;}
 \item{edf}{logical scalar: TRUE (default) if the number of degrees of freedom
 should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
 to a more traditional way (although not supported by theory) when FALSE.}
+
+\item{last_delta}{numeric scalar with the difference \eqn{x_{n+1}-x_{n}}; not
+relevant for most applications and defaults to 1.}
 }
 \value{
 The ouput of the \code{ssj_fix} function corresponding to the best
