@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // solve_jump_spline_fast
-List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in, double lambda, double M, int max_iter, double tol, double learning_rate, NumericVector gamma_init);
-RcppExport SEXP _jumps_solve_jump_spline_fast(SEXP x_inSEXP, SEXP y_inSEXP, SEXP lambdaSEXP, SEXP MSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP learning_rateSEXP, SEXP gamma_initSEXP) {
+List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in, double lambda, double M, int max_iter, double tol, double learning_rate, NumericVector gamma_init, double ebic_xi);
+RcppExport SEXP _jumps_solve_jump_spline_fast(SEXP x_inSEXP, SEXP y_inSEXP, SEXP lambdaSEXP, SEXP MSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP learning_rateSEXP, SEXP gamma_initSEXP, SEXP ebic_xiSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -25,7 +25,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< double >::type learning_rate(learning_rateSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type gamma_init(gamma_initSEXP);
-    rcpp_result_gen = Rcpp::wrap(solve_jump_spline_fast(x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init));
+    Rcpp::traits::input_parameter< double >::type ebic_xi(ebic_xiSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_jump_spline_fast(x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -110,7 +111,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_jumps_solve_jump_spline_fast", (DL_FUNC) &_jumps_solve_jump_spline_fast, 8},
+    {"_jumps_solve_jump_spline_fast", (DL_FUNC) &_jumps_solve_jump_spline_fast, 9},
     {"_jumps_da", (DL_FUNC) &_jumps_da, 5},
     {"_jumps_llt", (DL_FUNC) &_jumps_llt, 22},
     {"_jumps_llt_delta", (DL_FUNC) &_jumps_llt_delta, 23},

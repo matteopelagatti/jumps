@@ -11,10 +11,11 @@ auto_ssj_atw(
   lambda,
   grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
     TRUE)/mean(diff(x))/10),
-  ic = c("bic", "hq", "aic", "aicc"),
+  ic = c("bic", "ebic", "hq", "aic", "aicc"),
   max_iter = 100,
   tol = 1e-04,
-  learning_rate = 0.1
+  learning_rate = 0.1,
+  ebic_xi = 1
 )
 }
 \arguments{
@@ -28,14 +29,19 @@ auto_ssj_atw(
 of the \code{ssj_atw} function;}
 
 \item{ic}{string with information criterion for the choice: the default is
-"bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available;}
+"bic", but "ebic" (recommended when jumps are expected to be rare relative
+to the n-1 candidate locations -- see \code{ebic_xi}), "hq", "aic" and
+"aicc" are also available;}
 
 \item{max_iter}{maximum number of iterations in ssj_atw (default 100).}
 
 \item{tol}{tolerance for convergence of ssj_atw (default 1e-4).}
 
 \item{learning_rate}{learning rate of ssj_atw (default 0.1).}
+
+\item{ebic_xi}{numeric scalar in [0,1] passed to \code{ssj_atw}: strength
+of the Extended-BIC search penalty (default 1; only relevant when
+\code{ic = "ebic"}).}
 }
 \value{
 The ouput of the \code{ssj_awt} function corresponding to the best

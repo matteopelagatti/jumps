@@ -13,7 +13,8 @@ ssj_atw(
   max_iter = 100,
   tol = 1e-04,
   learning_rate = 0.1,
-  gamma_init = numeric(0)
+  gamma_init = numeric(0),
+  ebic_xi = 1
 )
 }
 \arguments{
@@ -34,6 +35,11 @@ adaptive scheme (default 0.1).}
 
 \item{gamma_init}{optional numeric vector of length n-1 with a warm-start
 for gamma; ignored when its length does not match n-1.}
+
+\item{ebic_xi}{numeric scalar in [0,1]: strength of the Extended-BIC penalty
+for searching over the n-1 candidate jump locations (default 1, the
+Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
+plain bic).}
 }
 \value{
 list with the following slots:
@@ -43,7 +49,7 @@ list with the following slots:
  \item maxsum: maximum sum of additional standard deviations.
  \item loglik: Gaussian log-likelihood evaluated at the unbiased residual variance sigma^2 = rss/(n - edf).
  \item gamma: additional times.
- \item ic: vector of information criteria (aic, aicc, bic, hq).
+ \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
  \item smoothed_level: vector with smoothing splines with jumps.
  \item x: the ordered x variable
 }

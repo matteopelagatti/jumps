@@ -13,6 +13,10 @@
 #'   adaptive scheme (default 0.1).
 #' @param gamma_init optional numeric vector of length n-1 with a warm-start
 #'   for gamma; ignored when its length does not match n-1.
+#' @param ebic_xi numeric scalar in [0,1]: strength of the Extended-BIC penalty
+#'   for searching over the n-1 candidate jump locations (default 1, the
+#'   Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
+#'   plain bic).
 #' @return list with the following slots:
 #' \itemize{
 #'  \item nobs: number of observations.
@@ -20,7 +24,7 @@
 #'  \item maxsum: maximum sum of additional standard deviations.
 #'  \item loglik: Gaussian log-likelihood evaluated at the unbiased residual variance sigma^2 = rss/(n - edf).
 #'  \item gamma: additional times.
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq).
+#'  \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
 #'  \item smoothed_level: vector with smoothing splines with jumps.
 #'  \item x: the ordered x variable
 #' }
@@ -37,7 +41,7 @@
 #' @export
 ssj_atw <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
                     max_iter = 100, tol = 1e-4, learning_rate = 0.1,
-                    gamma_init = numeric(0)) {
+                    gamma_init = numeric(0), ebic_xi = 1) {
   y <- as.numeric(y)
   x <- as.numeric(x)
   ord <- order(x)
@@ -53,7 +57,8 @@ ssj_atw <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
                                 lambda = lambda, M = maxsum,
                                 max_iter = max_iter, tol = tol,
                                 learning_rate = learning_rate,
-                                gamma_init = gamma_init)
+                                gamma_init = gamma_init,
+                                ebic_xi = ebic_xi)
   list(nobs = length(y),
        df = out$edf,
        maxsum = maxsum,
@@ -62,7 +67,8 @@ ssj_atw <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
        ic = c(aic  = out$aic,
               aicc = out$aicc,
               bic  = out$bic,
-              hq   = out$hq),
+              hq   = out$hq,
+              ebic = out$ebic),
        smoothed_level = out$f,
        x = x
   )
@@ -86,15 +92,19 @@ ssj_atw <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' @param grid numeric vector containing the grid for the argument \code{maxsum}
 #' of the \code{ssj_atw} function;
 #' @param ic string with information criterion for the choice: the default is
-#' "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-#' are available;
+#' "bic", but "ebic" (recommended when jumps are expected to be rare relative
+#' to the n-1 candidate locations -- see \code{ebic_xi}), "hq", "aic" and
+#' "aicc" are also available;
 #' @param max_iter maximum number of iterations in ssj_atw (default 100).
 #' @param tol tolerance for convergence of ssj_atw (default 1e-4).
 #' @param learning_rate learning rate of ssj_atw (default 0.1).
-#' 
+#' @param ebic_xi numeric scalar in [0,1] passed to \code{ssj_atw}: strength
+#' of the Extended-BIC search penalty (default 1; only relevant when
+#' \code{ic = "ebic"}).
+#'
 #' @returns The ouput of the \code{ssj_awt} function corresponding to the best
 #' choice according to the selected information criterion.
-#' 
+#'
 #' @examples
 #' plot(faithful$eruptions, faithful$waiting)
 #' of_jum <- auto_ssj_atw(y = faithful$waiting,
@@ -102,12 +112,13 @@ ssj_atw <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #'                        lambda = 1)
 #' lines(x = sort(faithful$eruptions),
 #'       y = of_jum$smoothed_level, col = "red", lwd = 2)
-#' 
+#'
 #' @export
 auto_ssj_atw <- function(y, x, lambda,
                          grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x))*10, sd(y, na.rm = TRUE)/mean(diff(x))/10),
-                         ic = c("bic", "hq", "aic", "aicc"),
-                         max_iter = 100, tol = 1e-4, learning_rate = 0.1
+                         ic = c("bic", "ebic", "hq", "aic", "aicc"),
+                         max_iter = 100, tol = 1e-4, learning_rate = 0.1,
+                         ebic_xi = 1
                          ) {
   ic <- match.arg(ic)
   last_ic     <- Inf
@@ -116,10 +127,12 @@ auto_ssj_atw <- function(y, x, lambda,
   for (M in grid) {
     out <- ssj_atw(y = y, x = x, lambda = lambda,
                    maxsum = M, max_iter = max_iter, tol = tol,
-                   learning_rate = learning_rate, gamma_init = gamma_init)
+                   learning_rate = learning_rate, gamma_init = gamma_init,
+                   ebic_xi = ebic_xi)
     gamma_init <- out$gamma   # warm start for the next grid point
     current_ic <- switch(ic,
                          bic  = out$ic["bic"],
+                         ebic = out$ic["ebic"],
                          hq   = out$ic["hq"],
                          aic  = out$ic["aic"],
                          aicc = out$ic["aicc"])

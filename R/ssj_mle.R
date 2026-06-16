@@ -1,0 +1,368 @@
+#' Smoothing splines with automatic jump detection via time-warping, with
+#' the smoothing parameter lambda estimated by maximum likelihood
+#'
+#' Identical to \code{ssj_kfs} except that \code{lambda} is no longer a fixed
+#' input: it is a free parameter optimized jointly with sigma and gamma. Since
+#' lambda enters only the observation variance \eqn{H_t = \lambda\sigma^2} and
+#' never the transition matrix, its score does not need the extra correction
+#' that gamma requires -- the plain Koopman-Shephard formula applies directly:
+#' \eqn{\partial\ell/\partial\lambda = (\sigma^2/2)\sum_t(e_t^2-d_t)}. This
+#' avoids having to grid-search lambda (which would suffer from the same
+#' degrees-of-freedom problem as maxsum) on top of the maxsum grid search.
+#' Internally lambda is optimized via \eqn{\mu=\log\lambda}, which guarantees
+#' lambda > 0 without a box constraint and avoids the scale instability seen
+#' when optimizing the raw lambda directly (its sensible range can span
+#' orders of magnitude, like a variance ratio); the score is a one-line
+#' chain-rule correction, \eqn{\partial\ell/\partial\mu =
+#' \lambda\,\partial\ell/\partial\lambda}. \code{parinit} and the returned
+#' \code{pars} are unaffected and stay in terms of the raw lambda. When
+#' \code{parinit} is not supplied, the optimizer's success turns out to
+#' depend on the path it traverses, not just on how close the starting
+#' lambda looks to the eventual optimum -- so rather than rely on a single
+#' formula, \code{ssj_mle} tries a handful of starting lambdas spanning
+#' several orders of magnitude (anchored at a robust, jump-resistant noise
+#' estimate via \code{mad(diff(y))}) and keeps whichever converges to the
+#' highest likelihood.
+#'
+#' @param y vector with the y (missing values allowed).
+#' @param x vector with the x (no missing values allowed).
+#' @param maxsum maximum sum of \eqn{\gamma_t} (time-warp budget).
+#' @param edf logical: if TRUE (default) computes effective degrees of freedom
+#'   as the trace of the hat matrix; if FALSE counts non-zero \eqn{\gamma_t}.
+#' @param parinit NULL or a numeric vector of length n+1 with starting values
+#'   for the optimizer (sigma, lambda, gamma_1, ..., gamma_{n-1}); pass the
+#'   previous solution for warm-starting.
+#' @param last_delta positive scalar: dummy spacing appended after the last
+#'   observation (does not affect the fit; default 1).
+#' @param ebic_xi numeric scalar in [0,1]: strength of the Extended-BIC penalty
+#'   for searching over the n-1 candidate jump locations (default 1, the
+#'   Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
+#'   plain bic).
+#' @return list with slots:
+#' \itemize{
+#'  \item opt: the output of the nloptr optimizer.
+#'  \item nobs: number of observations.
+#'  \item df: model degrees of freedom.
+#'  \item maxsum: the maxsum argument.
+#'  \item loglik: Gaussian log-likelihood at the optimum.
+#'  \item pars: named vector (sigma, lambda); lambda is now estimated.
+#'  \item gamma: estimated time-warp vector of length n-1.
+#'  \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
+#'  \item smoothed_level: smoothed estimate of f at each x.
+#'  \item var_smoothed_level: pointwise variance of the smoothed level.
+#'  \item x: the ordered x variable.
+#' }
+#'
+#' @examples
+#' plot(faithful$eruptions, faithful$waiting)
+#' of_mle <- ssj_mle(y = faithful$waiting,
+#'                   x = faithful$eruptions,
+#'                   maxsum = 150)
+#' lines(x = sort(faithful$eruptions),
+#'       y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
+#'
+#' @export
+ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+                    edf = TRUE, parinit = NULL, last_delta = 1, ebic_xi = 1) {
+  n    <- length(y)
+  n1   <- n + 1
+  nobs <- sum(!is.na(y))
+  vy   <- var(y, na.rm = TRUE)
+  vdy  <- var(diff(y), na.rm = TRUE)
+  sdy  <- sqrt(vy)
+  ord  <- order(x)
+  x    <- x[ord]
+  y    <- y[ord]
+  # delta has length n; the last element is the dummy spacing after y[n]
+  delta <- c(diff(x), last_delta)
+
+  # Pre-allocate KF/smoother arrays — modified in place by llt_delta
+  var_eps      <- numeric(n)
+  var_eta      <- numeric(n)
+  var_zeta     <- numeric(n)
+  cov_eta_zeta <- numeric(n)
+  a1  <- rep(y[!is.na(y)][1], n1)
+  a2  <- numeric(n1)
+  p11 <- rep(vy  * 1e5, n1)
+  p12 <- numeric(n1)
+  p22 <- rep(vdy * 1e5, n1)
+  k1  <- numeric(n)
+  k2  <- numeric(n)
+  inn <- numeric(n)   # innovations
+  fv  <- numeric(n)   # innovation variances
+  r1  <- numeric(n1)
+  r2  <- numeric(n1)
+  n11 <- numeric(n1)
+  n12 <- numeric(n1)
+  n22 <- numeric(n1)
+  e   <- numeric(n1)
+  d   <- numeric(n1)
+  w   <- numeric(n)
+  cnst <- log(2 * pi) / 2
+
+  # Objective (negative log-likelihood / nobs) and its analytical gradient.
+  # Parameters: pars[1] = sigma, pars[2] = lambda, pars[3:(n+1)] = gamma[1:(n-1)].
+  obj <- function(pars, wgt = FALSE) {
+    sigma  <- pars[1]
+    lambda <- exp(pars[2])              # pars[2] = mu = log(lambda): guarantees
+                                          # lambda > 0 with no box constraint, and
+                                          # avoids the scale blow-up seen when
+                                          # optimizing the raw (additive) lambda.
+    gamma  <- pars[3:(n + 1)]           # length n-1
+    sig2   <- sigma^2
+    tau    <- delta[1:(n-1)] + gamma    # stretched intervals, length n-1
+    tauf   <- c(tau, last_delta)         # with dummy tail, length n
+
+    var_eps[]      <- lambda * sig2
+    var_eta[]      <- sig2 * tauf^3 / 3
+    var_zeta[]     <- sig2 * tauf
+    cov_eta_zeta[] <- sig2 * tauf^2 / 2
+
+    mloglik <- if (wgt) {
+      -llt_delta(y, tauf, var_eps, var_eta, var_zeta, cov_eta_zeta,
+                 a1, a2, p11, p12, p22, k1, k2, inn, fv,
+                 r1, r2, n11, n12, n22, e, d, w)
+    } else {
+      -llt_delta(y, tauf, var_eps, var_eta, var_zeta, cov_eta_zeta,
+                 a1, a2, p11, p12, p22, k1, k2, inn, fv,
+                 r1, r2, n11, n12, n22, e, d)
+    }
+
+    # Koopman-Shephard (2003) analytical scores via smoother output.
+    rn1  <- r1[-1]^2       - n11[-1]
+    rn2  <- r2[-1]^2       - n22[-1]
+    rn12 <- r1[-1] * r2[-1] - n12[-1]
+
+    # H_t = lambda*sigma^2 enters ONLY the observation variance, never the
+    # transition matrix, so both sigma's and lambda's scores follow the plain
+    # Koopman-Shephard formula with no extra correction term -- unlike gamma.
+    process_s   <- sum(rn1 * tauf^3/3 + rn12 * tauf^2 + rn2 * tauf)
+    obs_s       <- sum(e * e - d)                 # raw, no lambda factor
+    grad_sigma  <- sigma * (process_s + lambda * obs_s)   # dH_t/d(sigma)  = 2*lambda*sigma
+    grad_lambda <- (sig2 / 2) * obs_s                      # dH_t/d(lambda) = sigma^2
+    grad_mu     <- lambda * grad_lambda   # chain rule: d(loglik)/d(mu) = lambda * d(loglik)/d(lambda)
+                                            # (verified numerically against numDeriv, incl. at lambda ~ 2e4)
+
+    # Score w.r.t. gamma_t: Qterm is the plain Koopman-Shephard piece (Q_t
+    # dependence); Tterm is the extra piece from gamma_t also entering the
+    # transition matrix T_t -- see ssj_kfs.R for the full derivation.
+    Qterm <- (sig2 / 2) * (rn1[1:(n-1)] * tau^2 +
+                             2 * rn12[1:(n-1)] * tau +
+                             rn2[1:(n-1)])
+
+    kk        <- 1 - k1[1:(n-1)]
+    alphahat2 <- a2[1:(n-1)] + p12[1:(n-1)] * r1[1:(n-1)] + p22[1:(n-1)] * r2[1:(n-1)]
+    PL21      <- p12[1:(n-1)] * (kk * n11[2:n] - k2[1:(n-1)] * n12[2:n]) +
+                 p22[1:(n-1)] * (tau * n11[2:n] + n12[2:n])
+    Tterm     <- alphahat2 * r1[2:n] - PL21
+
+    grad_gamma <- Qterm + Tterm
+
+    list(
+      objective = mloglik / nobs,
+      gradient  = c(-grad_sigma, -grad_mu, -grad_gamma) / nobs
+    )
+  }
+
+  # Single inequality constraint: sum(gamma) <= maxsum
+  g <- function(pars, wgt) {
+    list(
+      constraints = sum(pars[3:(n + 1)]) - maxsum,
+      jacobian    = c(0, 0, rep(1, n - 1))
+    )
+  }
+
+  quasizero <- sdy * 1e-9
+  lb        <- c(quasizero, -Inf, rep(0, n - 1))
+
+  # No single closed-form lambda guess proved robust across datasets: the
+  # optimizer's success turns out to depend on the *path* it traverses, not
+  # just on how close the starting lambda looks to the eventual optimum --
+  # a deliberately "wrong" (very large) starting lambda sometimes converges
+  # correctly precisely because traversing down from it passes through
+  # regions where gamma's benefit becomes visible, while starting already
+  # close to the optimal lambda can let the optimizer settle near gamma = 0
+  # without ever exploring further. Rather than chase a single formula, try
+  # a handful of starting lambdas spanning several orders of magnitude and
+  # keep whichever converges to the best (highest) likelihood -- the same
+  # "best of several attempts" principle already used below for the
+  # algorithm choice. This only applies when no explicit parinit is given;
+  # a user- or auto_ssj_mle-supplied parinit is used as-is, with no
+  # multi-start, since it already encodes a specific, informed choice (e.g.
+  # warm-started from the previous grid point).
+  lambda_init_candidates <- function() {
+    ok <- !is.na(y)
+    yo <- y[ok]; xo <- x[ok]
+    base <- tryCatch({
+      if (length(yo) < 5) stop("too few points")
+      dbar     <- mean(diff(xo))
+      sig2_eps <- (stats::mad(diff(yo)) / sqrt(2))^2
+      sig2_eps / dbar^3
+    }, error = function(e) NA_real_)
+    if (!is.finite(base) || base <= 0) base <- 1
+    base <- min(max(base, 1e-6), 1e6)  # keep the spread below from exploding
+    unique(c(1, base, 100 * base, 10000 * base))
+  }
+
+  run_nloptr <- function(opts, x0) {
+    nloptr::nloptr(x0 = x0, eval_f = obj, lb = lb, eval_g_ineq = g,
+                   opts = opts, wgt = FALSE)
+  }
+
+  # AUGLAG wrapping LBFGS converges far faster than CCSAQ on this problem when
+  # it works, but it has its own failure mode: it can report "converged"
+  # (ftol_reached) sitting at gamma = 0 with a large unused budget and a
+  # strongly improving direction still available -- a status-code check alone
+  # would not catch that. So in addition to the status code, check the KKT
+  # condition directly: with the budget constraint slack, every gamma_t stuck
+  # at its lower bound (0) must have non-positive score, or the claimed
+  # optimum is spurious and we fall back to CCSAQ.
+  looks_unconverged <- function(sol) {
+    gamma       <- sol[3:(n + 1)]
+    budget_left <- maxsum - sum(gamma)
+    if (budget_left < 1e-8 * max(maxsum, 1)) return(FALSE)  # budget fully used
+    inactive <- gamma <= 1e-8 * max(maxsum, 1)
+    if (!any(inactive)) return(FALSE)
+    grad_gamma <- -obj(sol)$gradient[3:(n + 1)] * nobs   # raw score d(loglik)/d(gamma)
+    scale <- max(abs(grad_gamma), 1e-8)
+    max(grad_gamma[inactive]) > 1e-6 * scale
+  }
+
+  solve_with_fallback <- function(x0) {
+    opt <- run_nloptr(list(algorithm         = "NLOPT_LD_AUGLAG",
+                           xtol_rel          = 1e-5,
+                           check_derivatives = FALSE,
+                           maxeval           = 2000,
+                           local_opts        = list(algorithm = "NLOPT_LD_LBFGS",
+                                                    xtol_rel  = 1e-6)),
+                      x0)
+    if (opt$status < 0 || opt$status == 5 || looks_unconverged(opt$solution)) {
+      opt <- run_nloptr(list(algorithm         = "NLOPT_LD_CCSAQ",
+                             xtol_rel          = 1e-5,
+                             check_derivatives = FALSE,
+                             maxeval           = 2000),
+                        x0)
+    }
+    opt
+  }
+
+  make_x0 <- function(lambda0) {
+    x0 <- c(sdy / 10, lambda0, rep(0, n - 1))
+    x0[2] <- log(max(x0[2], quasizero))
+    pmax(x0, lb)
+  }
+
+  # parinit (and the returned pars) are always in terms of the raw lambda;
+  # the conversion to mu = log(lambda) for the optimizer happens only here.
+  if (is.null(parinit)) {
+    attempts <- lapply(lambda_init_candidates(), function(lam0) solve_with_fallback(make_x0(lam0)))
+    opt <- attempts[[which.min(vapply(attempts, function(a) a$objective, numeric(1)))]]
+  } else {
+    x0 <- parinit
+    x0[2] <- log(max(x0[2], quasizero))
+    x0 <- pmax(x0, lb)
+    opt <- solve_with_fallback(x0)
+  }
+
+  if (edf) {
+    obj(opt$solution, TRUE)   # populates w via llt_delta side-effect
+    df <- sum(w)
+  } else {
+    df <- 2 + sum(opt$solution[3:(n + 1)] > quasizero)
+  }
+  loglik <- -nobs * (opt$objective + cnst)
+
+  # Extended BIC (Chen and Chen, 2008): bic plus 2*xi*k*log(p), where k is the
+  # number of active jump locations and p = n-1 the number of candidates.
+  k_active <- sum(opt$solution[3:(n + 1)] > quasizero)
+  bic_val  <- df * log(n) - 2 * loglik
+  ebic_val <- bic_val + 2 * ebic_xi * k_active * log(n - 1)
+
+  list(
+    opt                = opt,
+    nobs               = n,
+    df                 = df,
+    maxsum             = maxsum,
+    loglik             = loglik,
+    pars               = c(sigma = opt$solution[1], lambda = exp(opt$solution[2])),
+    gamma              = opt$solution[3:(n + 1)],
+    ic                 = c(aic  =  2 * (df - loglik),
+                           aicc =  2 * (df * n / (n - df - 1) - loglik),
+                           bic  =  bic_val,
+                           hq   =  2 * (log(log(n)) * df - loglik),
+                           ebic =  ebic_val),
+    smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1)],
+    var_smoothed_level = (p11 - p11^2 * n11 - 2 * p11 * p12 * n12 -
+                            p12^2 * n22)[-(n + 1)],
+    x                  = x
+  )
+}
+
+
+#' Automatic selection of the optimal time-warping smoothing spline with jumps
+#' using maximum-likelihood estimation of sigma, lambda and the time-warps
+#'
+#' Runs \code{ssj_mle} over a grid of \code{maxsum} values and returns the
+#' solution with the lowest selected information criterion. Unlike
+#' \code{auto_ssj_kfs}/\code{auto_ssj_atw}, lambda is not part of the grid: it
+#' is estimated by maximum likelihood inside every \code{ssj_mle} call, so
+#' only maxsum needs to be searched. Each grid point is warm-started from the
+#' previous optimum (sigma, lambda and gamma). The search stops early when the
+#' IC increases for three consecutive grid values.
+#'
+#' @param y vector with the y (missing values allowed).
+#' @param x vector with the x (no missing values allowed).
+#' @param grid numeric vector of maxsum values to search; default spans 0 to
+#'   10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).
+#' @param ic string: information criterion for selection. Default "ebic"
+#'   (recommended when jumps are expected to be rare relative to the n-1
+#'   candidate locations -- see \code{ebic_xi}); "bic", "hq", "aic" and
+#'   "aicc" are also available.
+#' @param edf logical: passed to \code{ssj_mle} (default TRUE).
+#' @param last_delta numeric scalar: passed to \code{ssj_mle} (default 1).
+#' @param ebic_xi numeric scalar in [0,1] passed to \code{ssj_mle}: strength
+#'   of the Extended-BIC search penalty (default 1; only relevant when
+#'   \code{ic = "ebic"}).
+#'
+#' @returns The output of \code{ssj_mle} corresponding to the best IC.
+#'
+#' @examples
+#' plot(faithful$eruptions, faithful$waiting)
+#' of_mle <- auto_ssj_mle(y = faithful$waiting,
+#'                        x = faithful$eruptions)
+#' lines(x = sort(faithful$eruptions),
+#'       y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
+#'
+#' @export
+auto_ssj_mle <- function(y, x,
+                         grid = seq(0,
+                                    sd(y, na.rm = TRUE) / mean(diff(x)) * 10,
+                                    sd(y, na.rm = TRUE) / mean(diff(x)) / 10),
+                         ic = c("ebic", "bic", "hq", "aic", "aicc"),
+                         edf = TRUE, last_delta = 1, ebic_xi = 1) {
+  ic          <- match.arg(ic)
+  last_ic     <- Inf
+  n_increases <- 0L
+  parinit     <- NULL
+  for (M in grid) {
+    out <- ssj_mle(y = y, x = x,
+                   maxsum = M, edf = edf, parinit = parinit,
+                   last_delta = last_delta, ebic_xi = ebic_xi)
+    parinit    <- c(out$pars["sigma"], out$pars["lambda"], out$gamma)   # warm start
+    current_ic <- switch(ic,
+                         bic  = out$ic["bic"],
+                         ebic = out$ic["ebic"],
+                         hq   = out$ic["hq"],
+                         aic  = out$ic["aic"],
+                         aicc = out$ic["aicc"])
+    if (current_ic < last_ic) {
+      best        <- out
+      last_ic     <- current_ic
+      n_increases <- 0L
+    } else {
+      n_increases <- n_increases + 1L
+      if (n_increases >= 3L) break
+    }
+  }
+  best
+}

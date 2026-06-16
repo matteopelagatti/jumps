@@ -12,7 +12,8 @@ solve_jump_spline_fast(
   max_iter = 100L,
   tol = 1e-04,
   learning_rate = 0.1,
-  gamma_init = numeric(0)
+  gamma_init = numeric(0),
+  ebic_xi = 1
 )
 }
 \arguments{
@@ -34,6 +35,11 @@ Barzilai-Borwein adaptive scheme (default 0.1).}
 \item{gamma_init}{optional numeric vector of length n-1 with a warm-start
 value for gamma; ignored (zero initialisation used) when its length differs
 from n-1.}
+
+\item{ebic_xi}{numeric scalar in [0,1]: strength of the extra Extended-BIC
+penalty 2*xi*k*log(n-1), where k is the number of active (nonzero) gamma_t.
+xi = 1 (default) is the Chen and Chen (2008) recommendation for genuinely
+sparse selection among many candidates; xi = 0 reduces ebic to plain bic.}
 }
 \value{
 A list with the following slots:
@@ -49,6 +55,8 @@ A list with the following slots:
   \item{aicc}{Akaike information criterion with bias correction.}
   \item{bic}{Bayesian information criterion.}
   \item{hq}{Hannan-Quinn information criterion.}
+  \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
+    locations on top of the usual bic (see ebic_xi).}
 }
 }
 \description{

@@ -66,6 +66,10 @@ void project_simplex_inplace(const VectorXd& v, double budget,
 //' @param gamma_init optional numeric vector of length n-1 with a warm-start
 //'   value for gamma; ignored (zero initialisation used) when its length differs
 //'   from n-1.
+//' @param ebic_xi numeric scalar in [0,1]: strength of the extra Extended-BIC
+//'   penalty 2*xi*k*log(n-1), where k is the number of active (nonzero) gamma_t.
+//'   xi = 1 (default) is the Chen and Chen (2008) recommendation for genuinely
+//'   sparse selection among many candidates; xi = 0 reduces ebic to plain bic.
 //'
 //' @returns A list with the following slots:
 //' \describe{
@@ -80,13 +84,16 @@ void project_simplex_inplace(const VectorXd& v, double budget,
 //'   \item{aicc}{Akaike information criterion with bias correction.}
 //'   \item{bic}{Bayesian information criterion.}
 //'   \item{hq}{Hannan-Quinn information criterion.}
+//'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
+//'     locations on top of the usual bic (see ebic_xi).}
 //' }
 // [[Rcpp::export]]
 List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
                             double lambda, double M,
                             int max_iter = 100, double tol = 1e-4,
                             double learning_rate = 0.1,
-                            NumericVector gamma_init = NumericVector(0)) {
+                            NumericVector gamma_init = NumericVector(0),
+                            double ebic_xi = 1.0) {
 
   Map<VectorXd> x(as<Map<VectorXd> >(x_in));
   Map<VectorXd> y(as<Map<VectorXd> >(y_in));
@@ -236,6 +243,15 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
   double bic  = n * std::log(mse) + std::log((double)n) * edf_final;
   double hq   = n * std::log(mse) + 2 * std::log(std::log((double)n)) * edf_final;
 
+  // Extended BIC (Chen and Chen, 2008): bic plus 2*xi*k*log(p), where k is the
+  // number of active jump locations and p = n-1 the number of candidates.
+  // Corrects for searching over many candidate locations under sparsity --
+  // plain bic's log(n)*edf penalty does not charge for *which* locations were
+  // selected, only for the resulting smoothing flexibility.
+  int    k_active = (int)(gamma.array() > 0.0).count();
+  double p_cand   = (double)(n - 1);
+  double ebic     = bic + 2.0 * ebic_xi * k_active * std::log(p_cand);
+
   return List::create(
     Named("f")      = f_curr,
     Named("gamma")  = gamma,
@@ -247,6 +263,7 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
     Named("aic")    = aic,
     Named("aicc")   = aicc,
     Named("bic")    = bic,
-    Named("hq")     = hq
+    Named("hq")     = hq,
+    Named("ebic")   = ebic
   );
 }
