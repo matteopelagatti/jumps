@@ -14,6 +14,10 @@
 #' @param gamma_init optional numeric vector of length n-1 with a warm-start
 #'   value for gamma; ignored (zero initialisation used) when its length differs
 #'   from n-1.
+#' @param ebic_xi numeric scalar in [0,1]: strength of the extra Extended-BIC
+#'   penalty 2*xi*k*log(n-1), where k is the number of active (nonzero) gamma_t.
+#'   xi = 1 (default) is the Chen and Chen (2008) recommendation for genuinely
+#'   sparse selection among many candidates; xi = 0 reduces ebic to plain bic.
 #'
 #' @returns A list with the following slots:
 #' \describe{
@@ -28,9 +32,11 @@
 #'   \item{aicc}{Akaike information criterion with bias correction.}
 #'   \item{bic}{Bayesian information criterion.}
 #'   \item{hq}{Hannan-Quinn information criterion.}
+#'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
+#'     locations on top of the usual bic (see ebic_xi).}
 #' }
-solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol = 1e-4, learning_rate = 0.1, gamma_init = numeric(0)) {
-    .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init)
+solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol = 1e-4, learning_rate = 0.1, gamma_init = numeric(0), ebic_xi = 1.0) {
+    .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi)
 }
 
 #' Internal function for computing scores w/r to regression coefficients

@@ -11,9 +11,10 @@ auto_ssj_kfs(
   lambda,
   grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
     TRUE)/mean(diff(x))/10),
-  ic = c("bic", "hq", "aic", "aicc"),
+  ic = c("bic", "ebic", "hq", "aic", "aicc"),
   edf = TRUE,
-  last_delta = 1
+  last_delta = 1,
+  ebic_xi = 1
 )
 }
 \arguments{
@@ -26,12 +27,17 @@ auto_ssj_kfs(
 \item{grid}{numeric vector of maxsum values to search; default spans 0 to
 10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).}
 
-\item{ic}{string: information criterion for selection ("bic", "hq",
-"aic", "aicc").}
+\item{ic}{string: information criterion for selection ("bic", "ebic"
+(recommended when jumps are expected to be rare relative to the n-1
+candidate locations -- see \code{ebic_xi}), "hq", "aic", "aicc").}
 
 \item{edf}{logical: passed to \code{ssj_kfs} (default TRUE).}
 
 \item{last_delta}{numeric scalar: passed to \code{ssj_kfs} (default 1).}
+
+\item{ebic_xi}{numeric scalar in [0,1] passed to \code{ssj_kfs}: strength
+of the Extended-BIC search penalty (default 1; only relevant when
+\code{ic = "ebic"}).}
 }
 \value{
 The output of \code{ssj_kfs} corresponding to the best IC.

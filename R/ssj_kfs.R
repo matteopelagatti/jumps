@@ -23,6 +23,10 @@
 #'   solution for warm-starting.
 #' @param last_delta positive scalar: dummy spacing appended after the last
 #'   observation (does not affect the fit; default 1).
+#' @param ebic_xi numeric scalar in [0,1]: strength of the Extended-BIC penalty
+#'   for searching over the n-1 candidate jump locations (default 1, the
+#'   Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
+#'   plain bic).
 #' @return list with slots:
 #' \itemize{
 #'  \item opt: the output of the nloptr optimizer.
@@ -32,7 +36,7 @@
 #'  \item loglik: Gaussian log-likelihood at the optimum.
 #'  \item pars: named vector (sigma, lambda).
 #'  \item gamma: estimated time-warp vector of length n-1.
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq).
+#'  \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
 #'  \item smoothed_level: smoothed estimate of f at each x.
 #'  \item var_smoothed_level: pointwise variance of the smoothed level.
 #'  \item x: the ordered x variable.
@@ -49,7 +53,7 @@
 #'
 #' @export
 ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
-                    edf = TRUE, parinit = NULL, last_delta = 1) {
+                    edf = TRUE, parinit = NULL, last_delta = 1, ebic_xi = 1) {
   n    <- length(y)
   n1   <- n + 1
   nobs <- sum(!is.na(y))
@@ -162,17 +166,43 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   lb    <- c(quasizero, rep(0, n - 1))
   inits <- pmax(inits, lb)
 
-  opt <- nloptr::nloptr(
-    x0          = inits,
-    eval_f      = obj,
-    lb          = lb,
-    eval_g_ineq = g,
-    opts        = list(algorithm         = "NLOPT_LD_CCSAQ",
-                       xtol_rel          = 1e-5,
-                       check_derivatives = FALSE,
-                       maxeval           = 2000),
-    wgt = FALSE
-  )
+  run_nloptr <- function(opts) {
+    nloptr::nloptr(x0 = inits, eval_f = obj, lb = lb, eval_g_ineq = g,
+                   opts = opts, wgt = FALSE)
+  }
+
+  # AUGLAG wrapping LBFGS converges far faster than CCSAQ on this problem when
+  # it works, but it has its own failure mode: it can report "converged"
+  # (ftol_reached) sitting at gamma = 0 with a large unused budget and a
+  # strongly improving direction still available -- a status-code check alone
+  # would not catch that. So in addition to the status code, check the KKT
+  # condition directly: with the budget constraint slack, every gamma_t stuck
+  # at its lower bound (0) must have non-positive score, or the claimed
+  # optimum is spurious and we fall back to CCSAQ.
+  looks_unconverged <- function(sol) {
+    gamma       <- sol[2:n]
+    budget_left <- maxsum - sum(gamma)
+    if (budget_left < 1e-8 * max(maxsum, 1)) return(FALSE)  # budget fully used
+    inactive <- gamma <= 1e-8 * max(maxsum, 1)
+    if (!any(inactive)) return(FALSE)
+    grad_gamma <- -obj(sol)$gradient[2:n] * nobs   # raw score d(loglik)/d(gamma)
+    scale <- max(abs(grad_gamma), 1e-8)
+    max(grad_gamma[inactive]) > 1e-6 * scale
+  }
+
+  opt <- run_nloptr(list(algorithm         = "NLOPT_LD_AUGLAG",
+                         xtol_rel          = 1e-5,
+                         check_derivatives = FALSE,
+                         maxeval           = 2000,
+                         local_opts        = list(algorithm = "NLOPT_LD_LBFGS",
+                                                  xtol_rel  = 1e-6)))
+
+  if (opt$status < 0 || opt$status == 5 || looks_unconverged(opt$solution)) {
+    opt <- run_nloptr(list(algorithm         = "NLOPT_LD_CCSAQ",
+                           xtol_rel          = 1e-5,
+                           check_derivatives = FALSE,
+                           maxeval           = 2000))
+  }
 
   if (edf) {
     obj(opt$solution, TRUE)   # populates w via llt_delta side-effect
@@ -181,6 +211,15 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     df <- 1 + sum(opt$solution[2:n] > quasizero)
   }
   loglik <- -nobs * (opt$objective + cnst)
+
+  # Extended BIC (Chen and Chen, 2008): bic plus 2*xi*k*log(p), where k is the
+  # number of active jump locations and p = n-1 the number of candidates.
+  # Corrects for searching over many candidate locations under sparsity --
+  # plain bic's log(n)*df penalty does not charge for *which* locations were
+  # selected, only for the resulting smoothing flexibility.
+  k_active <- sum(opt$solution[2:n] > quasizero)
+  bic_val  <- df * log(n) - 2 * loglik
+  ebic_val <- bic_val + 2 * ebic_xi * k_active * log(n - 1)
 
   list(
     opt                = opt,
@@ -192,8 +231,9 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     gamma              = opt$solution[2:n],
     ic                 = c(aic  =  2 * (df - loglik),
                            aicc =  2 * (df * n / (n - df - 1) - loglik),
-                           bic  =  df * log(n) - 2 * loglik,
-                           hq   =  2 * (log(log(n)) * df - loglik)),
+                           bic  =  bic_val,
+                           hq   =  2 * (log(log(n)) * df - loglik),
+                           ebic =  ebic_val),
     smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1)],
     var_smoothed_level = (p11 - p11^2 * n11 - 2 * p11 * p12 * n12 -
                             p12^2 * n22)[-(n + 1)],
@@ -215,10 +255,14 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' @param lambda smoothing constant (positive scalar).
 #' @param grid numeric vector of maxsum values to search; default spans 0 to
 #'   10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).
-#' @param ic string: information criterion for selection ("bic", "hq",
-#'   "aic", "aicc").
+#' @param ic string: information criterion for selection ("bic", "ebic"
+#'   (recommended when jumps are expected to be rare relative to the n-1
+#'   candidate locations -- see \code{ebic_xi}), "hq", "aic", "aicc").
 #' @param edf logical: passed to \code{ssj_kfs} (default TRUE).
 #' @param last_delta numeric scalar: passed to \code{ssj_kfs} (default 1).
+#' @param ebic_xi numeric scalar in [0,1] passed to \code{ssj_kfs}: strength
+#'   of the Extended-BIC search penalty (default 1; only relevant when
+#'   \code{ic = "ebic"}).
 #'
 #' @returns The output of \code{ssj_kfs} corresponding to the best IC.
 #'
@@ -235,8 +279,8 @@ auto_ssj_kfs <- function(y, x, lambda,
                          grid = seq(0,
                                     sd(y, na.rm = TRUE) / mean(diff(x)) * 10,
                                     sd(y, na.rm = TRUE) / mean(diff(x)) / 10),
-                         ic = c("bic", "hq", "aic", "aicc"),
-                         edf = TRUE, last_delta = 1) {
+                         ic = c("bic", "ebic", "hq", "aic", "aicc"),
+                         edf = TRUE, last_delta = 1, ebic_xi = 1) {
   ic          <- match.arg(ic)
   last_ic     <- Inf
   n_increases <- 0L
@@ -244,10 +288,11 @@ auto_ssj_kfs <- function(y, x, lambda,
   for (M in grid) {
     out <- ssj_kfs(y = y, x = x, lambda = lambda,
                    maxsum = M, edf = edf, parinit = parinit,
-                   last_delta = last_delta)
+                   last_delta = last_delta, ebic_xi = ebic_xi)
     parinit    <- c(out$pars["sigma"], out$gamma)   # warm start
     current_ic <- switch(ic,
                          bic  = out$ic["bic"],
+                         ebic = out$ic["ebic"],
                          hq   = out$ic["hq"],
                          aic  = out$ic["aic"],
                          aicc = out$ic["aicc"])

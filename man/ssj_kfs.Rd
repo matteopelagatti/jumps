@@ -12,7 +12,8 @@ ssj_kfs(
   maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   edf = TRUE,
   parinit = NULL,
-  last_delta = 1
+  last_delta = 1,
+  ebic_xi = 1
 )
 }
 \arguments{
@@ -34,6 +35,11 @@ solution for warm-starting.}
 
 \item{last_delta}{positive scalar: dummy spacing appended after the last
 observation (does not affect the fit; default 1).}
+
+\item{ebic_xi}{numeric scalar in [0,1]: strength of the Extended-BIC penalty
+for searching over the n-1 candidate jump locations (default 1, the
+Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
+plain bic).}
 }
 \value{
 list with slots:
@@ -45,7 +51,7 @@ list with slots:
  \item loglik: Gaussian log-likelihood at the optimum.
  \item pars: named vector (sigma, lambda).
  \item gamma: estimated time-warp vector of length n-1.
- \item ic: vector of information criteria (aic, aicc, bic, hq).
+ \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
  \item smoothed_level: smoothed estimate of f at each x.
  \item var_smoothed_level: pointwise variance of the smoothed level.
  \item x: the ordered x variable.
