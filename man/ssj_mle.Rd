@@ -69,13 +69,13 @@ orders of magnitude, like a variance ratio); the score is a one-line
 chain-rule correction, \eqn{\partial\ell/\partial\mu =
 \lambda\,\partial\ell/\partial\lambda}. \code{parinit} and the returned
 \code{pars} are unaffected and stay in terms of the raw lambda. When
-\code{parinit} is not supplied, the optimizer's success turns out to depend
-on the path it traverses, not just on how close the starting lambda looks
-to the eventual optimum -- so rather than rely on a single formula,
-\code{ssj_mle} tries a handful of starting lambdas spanning several orders
-of magnitude (anchored at a robust, jump-resistant noise estimate via
-\code{mad(diff(y))}) and keeps whichever converges to the highest
-likelihood.
+\code{parinit} is not supplied, the optimizer's success turns out to
+depend on the path it traverses, not just on how close the starting
+lambda looks to the eventual optimum -- so rather than rely on a single
+formula, \code{ssj_mle} tries a handful of starting lambdas spanning
+several orders of magnitude (anchored at a robust, jump-resistant noise
+estimate via \code{mad(diff(y))}) and keeps whichever converges to the
+highest likelihood.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)
