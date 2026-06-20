@@ -9,7 +9,7 @@ ssj_atw(
   y,
   x,
   lambda,
-  maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+  maxsum = max(x) - min(x),
   max_iter = 100,
   tol = 1e-04,
   learning_rate = 0.1,

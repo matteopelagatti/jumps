@@ -30,6 +30,53 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cssd_irregular_eigen
+NumericVector cssd_irregular_eigen(NumericVector y_in, NumericVector x_in, double lambda, int max_iter, double rho);
+RcppExport SEXP _jumps_cssd_irregular_eigen(SEXP y_inSEXP, SEXP x_inSEXP, SEXP lambdaSEXP, SEXP max_iterSEXP, SEXP rhoSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type y_in(y_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x_in(x_inSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda(lambdaSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type rho(rhoSEXP);
+    rcpp_result_gen = Rcpp::wrap(cssd_irregular_eigen(y_in, x_in, lambda, max_iter, rho));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cssd_potts
+List cssd_potts(NumericVector y_in, NumericVector x_in, double p, double gamma, NumericVector delta_in);
+RcppExport SEXP _jumps_cssd_potts(SEXP y_inSEXP, SEXP x_inSEXP, SEXP pSEXP, SEXP gammaSEXP, SEXP delta_inSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type y_in(y_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x_in(x_inSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type delta_in(delta_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(cssd_potts(y_in, x_in, p, gamma, delta_in));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cssd_potts_predict
+NumericVector cssd_potts_predict(NumericVector y_in, NumericVector x_in, NumericVector f_hat_in, NumericVector disc_locs_in, NumericVector xq_in, double p, NumericVector delta_in);
+RcppExport SEXP _jumps_cssd_potts_predict(SEXP y_inSEXP, SEXP x_inSEXP, SEXP f_hat_inSEXP, SEXP disc_locs_inSEXP, SEXP xq_inSEXP, SEXP pSEXP, SEXP delta_inSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type y_in(y_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type x_in(x_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type f_hat_in(f_hat_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type disc_locs_in(disc_locs_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type xq_in(xq_inSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type delta_in(delta_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(cssd_potts_predict(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in));
+    return rcpp_result_gen;
+END_RCPP
+}
 // da
 void da(NumericVector k1, NumericVector k2, NumericMatrix X, NumericMatrix A1, NumericMatrix A2);
 RcppExport SEXP _jumps_da(SEXP k1SEXP, SEXP k2SEXP, SEXP XSEXP, SEXP A1SEXP, SEXP A2SEXP) {
@@ -112,6 +159,9 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_jumps_solve_jump_spline_fast", (DL_FUNC) &_jumps_solve_jump_spline_fast, 9},
+    {"_jumps_cssd_irregular_eigen", (DL_FUNC) &_jumps_cssd_irregular_eigen, 5},
+    {"_jumps_cssd_potts", (DL_FUNC) &_jumps_cssd_potts, 5},
+    {"_jumps_cssd_potts_predict", (DL_FUNC) &_jumps_cssd_potts_predict, 7},
     {"_jumps_da", (DL_FUNC) &_jumps_da, 5},
     {"_jumps_llt", (DL_FUNC) &_jumps_llt, 22},
     {"_jumps_llt_delta", (DL_FUNC) &_jumps_llt_delta, 23},

@@ -39,6 +39,32 @@ solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol =
     .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi)
 }
 
+#' ADMM solver for TV denoising with irregular sampling
+#'
+#' Solves min_u (1/2)||y - u||^2 + lambda*||Du||_1 where D is the weighted
+#' first-difference matrix with (Du)_i = (u_{i+1} - u_i) / dx_i.
+#' The system (I + rho*D'D) is factorized once and reused every iteration.
+#'
+#' @param y_in numeric vector of length n (no NAs).
+#' @param x_in strictly increasing numeric vector of length n (the sample sites).
+#' @param lambda positive regularization parameter.
+#' @param max_iter maximum number of ADMM iterations (default 100).
+#' @param rho positive augmented-Lagrangian step; affects convergence speed
+#'   but not the solution (default 1.0).
+#'
+#' @return Numeric vector u of length n: the piecewise-constant minimizer.
+cssd_irregular_eigen <- function(y_in, x_in, lambda, max_iter = 100L, rho = 1.0) {
+    .Call(`_jumps_cssd_irregular_eigen`, y_in, x_in, lambda, max_iter, rho)
+}
+
+cssd_potts <- function(y_in, x_in, p, gamma, delta_in) {
+    .Call(`_jumps_cssd_potts`, y_in, x_in, p, gamma, delta_in)
+}
+
+cssd_potts_predict <- function(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in) {
+    .Call(`_jumps_cssd_potts_predict`, y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in)
+}
+
 #' Internal function for computing scores w/r to regression coefficients
 #' 
 #' This function, not intended for end-users, implements the following

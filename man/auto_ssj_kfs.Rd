@@ -9,9 +9,8 @@ auto_ssj_kfs(
   y,
   x,
   lambda,
-  grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
-    TRUE)/mean(diff(x))/10),
-  ic = c("bic", "ebic", "hq", "aic", "aicc"),
+  grid = seq(0, max(x) - min(x), length.out = 21L),
+  ic = c("ebic", "bic", "hq", "aic", "aicc"),
   edf = TRUE,
   last_delta = 1,
   ebic_xi = 1
@@ -24,8 +23,8 @@ auto_ssj_kfs(
 
 \item{lambda}{smoothing constant (positive scalar).}
 
-\item{grid}{numeric vector of maxsum values to search; default spans 0 to
-10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).}
+\item{grid}{numeric vector of maxsum values to search; default is 21 equally
+spaced values from 0 to the x range.}
 
 \item{ic}{string: information criterion for selection ("bic", "ebic"
 (recommended when jumps are expected to be rare relative to the n-1
