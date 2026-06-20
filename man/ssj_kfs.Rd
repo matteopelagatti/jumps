@@ -9,7 +9,7 @@ ssj_kfs(
   y,
   x,
   lambda,
-  maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+  maxsum = max(x) - min(x),
   edf = TRUE,
   parinit = NULL,
   last_delta = 1,

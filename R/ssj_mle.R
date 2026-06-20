@@ -76,6 +76,28 @@ ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   # delta has length n; the last element is the dummy spacing after y[n]
   delta <- c(diff(x), last_delta)
 
+  # Normalise to make the problem scale-independent: x -> [0,1], y -> unit
+  # variance.  Units: sigma ~ [y]/[x]^{3/2}, so sigma_norm = sigma_orig *
+  # x_range^{3/2} / y_scale; lambda ~ [x]^3, so lambda_norm = lambda_orig /
+  # x_range^3; gamma_norm = gamma_orig / x_range.  All back-transformations are
+  # applied to the returned quantities; the optimiser works in normalised units.
+  # Consequence: lambda_init_candidates can be a fixed grid independent of the
+  # data scale, eliminating the instability of the 1/dbar^3 formula.
+  x_range    <- x[n] - x[1L]   # x is already sorted
+  x_min_s    <- x[1L]
+  y_scale    <- sdy
+  if (x_range < .Machine$double.eps) stop("'x' has zero range")
+  x          <- (x - x_min_s) / x_range
+  y          <- y / y_scale
+  delta      <- delta / x_range
+  last_delta <- last_delta / x_range  # normalise the dummy tail spacing
+  maxsum_orig <- maxsum
+  maxsum      <- maxsum / x_range     # normalise the budget constraint
+  # Update statistics to normalised coordinates
+  vy  <- 1.0           # var(y/y_scale) = 1 by construction
+  sdy <- 1.0
+  vdy <- vdy / y_scale^2
+
   # Pre-allocate KF/smoother arrays — modified in place by llt_delta
   var_eps      <- numeric(n)
   var_eta      <- numeric(n)
@@ -190,19 +212,10 @@ ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   # a user- or auto_ssj_mle-supplied parinit is used as-is, with no
   # multi-start, since it already encodes a specific, informed choice (e.g.
   # warm-started from the previous grid point).
-  lambda_init_candidates <- function() {
-    ok <- !is.na(y)
-    yo <- y[ok]; xo <- x[ok]
-    base <- tryCatch({
-      if (length(yo) < 5) stop("too few points")
-      dbar     <- mean(diff(xo))
-      sig2_eps <- (stats::mad(diff(yo)) / sqrt(2))^2
-      sig2_eps / dbar^3
-    }, error = function(e) NA_real_)
-    if (!is.finite(base) || base <= 0) base <- 1
-    base <- min(max(base, 1e-6), 1e6)  # keep the spread below from exploding
-    unique(c(1, base, 100 * base, 10000 * base))
-  }
+  # After normalising x -> [0,1] and y -> unit variance, lambda_norm lives in
+  # a dataset-independent range.  A fixed six-point grid spanning 1e-4 to 1e2
+  # covers the practically relevant region without a fragile 1/dbar^3 formula.
+  lambda_init_candidates <- function() c(1e-4, 1e-2, 0.1, 1, 10, 100)
 
   run_nloptr <- function(opts, x0) {
     nloptr::nloptr(x0 = x0, eval_f = obj, lb = lb, eval_g_ineq = g,
@@ -252,23 +265,43 @@ ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     pmax(x0, lb)
   }
 
-  # parinit (and the returned pars) are always in terms of the raw lambda;
-  # the conversion to mu = log(lambda) for the optimizer happens only here.
+  # parinit is accepted in ORIGINAL units and converted here to normalised
+  # units so callers (including auto_ssj_mle) can always work in the natural
+  # scale of the data.  The returned pars / gamma are back-transformed below.
   if (is.null(parinit)) {
     attempts <- lapply(lambda_init_candidates(), function(lam0) solve_with_fallback(make_x0(lam0)))
     opt <- attempts[[which.min(vapply(attempts, function(a) a$objective, numeric(1)))]]
   } else {
-    x0 <- parinit
-    x0[2] <- log(max(x0[2], quasizero))
+    x0      <- parinit
+    x0[1L]             <- x0[1L] * x_range^1.5 / y_scale   # sigma:  orig -> norm
+    x0[2L]             <- x0[2L] / x_range^3               # lambda: orig -> norm (pre-log)
+    x0[3L:(n + 1L)]   <- x0[3L:(n + 1L)] / x_range        # gamma:  orig -> norm
+    x0[2L] <- log(max(x0[2L], quasizero))
     x0 <- pmax(x0, lb)
     opt <- solve_with_fallback(x0)
   }
 
   if (edf) {
-    obj(opt$solution, TRUE)   # populates w via llt_delta side-effect
+    obj(opt$solution, TRUE)   # populates w, r1, r2, n11, n12, n22 via llt_delta side-effect
     df <- sum(w)
+    # Smoothed level and slope disturbances: E[eta_t | Y] = Q_t * [r1_{t+1}; r2_{t+1}].
+    # var_eta, var_zeta, cov_eta_zeta are already set by the llt_delta call above.
+    # Length n (index t = 1,...,n); only t = 1,...,n-1 are meaningful for gamma.
+    eta_hat  <- var_eta * r1[-1] + cov_eta_zeta * r2[-1]
+    zeta_hat <- cov_eta_zeta * r1[-1] + var_zeta * r2[-1]
+    # Variance of smoothed disturbances: Var(eta_hat_t) = Q_t - Q_t N_{t+1} Q_t
+    var_eta_hat  <- pmax(var_eta  - (var_eta^2        * n11[-1] +
+                                     2*var_eta*cov_eta_zeta * n12[-1] +
+                                     cov_eta_zeta^2   * n22[-1]), 0)
+    var_zeta_hat <- pmax(var_zeta - (cov_eta_zeta^2   * n11[-1] +
+                                     2*cov_eta_zeta*var_zeta * n12[-1] +
+                                     var_zeta^2       * n22[-1]), 0)
+    eps <- .Machine$double.eps
+    std_eta_hat  <- eta_hat  / sqrt(var_eta_hat  + eps)
+    std_zeta_hat <- zeta_hat / sqrt(var_zeta_hat + eps)
   } else {
     df <- 2 + sum(opt$solution[3:(n + 1)] > quasizero)
+    eta_hat <- zeta_hat <- std_eta_hat <- std_zeta_hat <- NULL
   }
   loglik <- -nobs * (opt$objective + cnst)
 
@@ -278,23 +311,29 @@ ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   bic_val  <- df * log(n) - 2 * loglik
   ebic_val <- bic_val + 2 * ebic_xi * k_active * log(n - 1)
 
+  # Back-transform all returned quantities to original units.
   list(
     opt                = opt,
     nobs               = n,
     df                 = df,
-    maxsum             = maxsum,
+    maxsum             = maxsum_orig,
     loglik             = loglik,
-    pars               = c(sigma = opt$solution[1], lambda = exp(opt$solution[2])),
-    gamma              = opt$solution[3:(n + 1)],
+    pars               = c(sigma  = opt$solution[1L] * y_scale / x_range^1.5,
+                           lambda = exp(opt$solution[2L]) * x_range^3),
+    gamma              = opt$solution[3L:(n + 1L)] * x_range,
     ic                 = c(aic  =  2 * (df - loglik),
                            aicc =  2 * (df * n / (n - df - 1) - loglik),
                            bic  =  bic_val,
                            hq   =  2 * (log(log(n)) * df - loglik),
                            ebic =  ebic_val),
-    smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1)],
+    smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1L)] * y_scale,
     var_smoothed_level = (p11 - p11^2 * n11 - 2 * p11 * p12 * n12 -
-                            p12^2 * n22)[-(n + 1)],
-    x                  = x
+                            p12^2 * n22)[-(n + 1L)] * y_scale^2,
+    dist_level         = eta_hat  * y_scale,          # level disturbance in orig y units
+    dist_slope         = zeta_hat * y_scale / x_range, # slope disturbance in orig y/x units
+    std_dist_level     = std_eta_hat,                  # dimensionless, no rescaling
+    std_dist_slope     = std_zeta_hat,
+    x                  = x * x_range + x_min_s        # back to original x
   )
 }
 
@@ -335,20 +374,48 @@ ssj_mle <- function(y, x, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #'
 #' @export
 auto_ssj_mle <- function(y, x,
-                         grid = seq(0,
-                                    sd(y, na.rm = TRUE) / mean(diff(x)) * 10,
-                                    sd(y, na.rm = TRUE) / mean(diff(x)) / 10),
+                         grid = seq(0, max(x) - min(x), length.out = 21L),
                          ic = c("ebic", "bic", "hq", "aic", "aicc"),
                          edf = TRUE, last_delta = 1, ebic_xi = 1) {
-  ic          <- match.arg(ic)
+  ic <- match.arg(ic)
+  n  <- length(y)
+
+  # Stage 1: fit the pure smooth (maxsum = 0).  With no gamma degrees of
+  # freedom the optimisation landscape is unimodal and sigma/lambda are
+  # identified cleanly.  The smoothed level disturbances E[eta_t | Y] are
+  # large at locations where the smooth model is "surprised" by a sudden
+  # level change — i.e. at genuine discontinuities.
+  fit0   <- ssj_mle(y = y, x = x, maxsum = 0, edf = TRUE,
+                    last_delta = last_delta, ebic_xi = ebic_xi)
+  sigma0 <- fit0$pars["sigma"]
+  lam0   <- fit0$pars["lambda"]
+  # abs level disturbances for t = 1, ..., n-1  (t = n is the dummy tail)
+  # dist_level is returned in original y units; proportional allocation below
+  # gives gamma init values that sum to M (in original x units), which ssj_mle
+  # normalises internally.
+  eta_abs <- abs(fit0$dist_level[seq_len(n - 1L)])
+
+  # Allocate the maxsum budget proportionally to the disturbance magnitudes,
+  # giving the optimizer a warm start at the right *locations*.
+  init_gamma <- function(M) {
+    s <- sum(eta_abs)
+    if (s < .Machine$double.eps) return(rep(0, n - 1L))
+    eta_abs / s * M
+  }
+
   last_ic     <- Inf
   n_increases <- 0L
-  parinit     <- NULL
+  best        <- fit0
+
   for (M in grid) {
-    out <- ssj_mle(y = y, x = x,
-                   maxsum = M, edf = edf, parinit = parinit,
-                   last_delta = last_delta, ebic_xi = ebic_xi)
-    parinit    <- c(out$pars["sigma"], out$pars["lambda"], out$gamma)   # warm start
+    if (M == 0) {
+      out <- fit0
+    } else {
+      parinit <- c(sigma0, lam0, init_gamma(M))
+      out <- ssj_mle(y = y, x = x,
+                     maxsum = M, edf = edf, parinit = parinit,
+                     last_delta = last_delta, ebic_xi = ebic_xi)
+    }
     current_ic <- switch(ic,
                          bic  = out$ic["bic"],
                          ebic = out$ic["ebic"],

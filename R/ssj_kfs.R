@@ -52,7 +52,7 @@
 #'       y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 #'
 #' @export
-ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+ssj_kfs <- function(y, x, lambda, maxsum = max(x) - min(x),
                     edf = TRUE, parinit = NULL, last_delta = 1, ebic_xi = 1) {
   n    <- length(y)
   n1   <- n + 1
@@ -65,6 +65,28 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   y    <- y[ord]
   # delta has length n; the last element is the dummy spacing after y[n]
   delta <- c(diff(x), last_delta)
+
+  # Normalise: x -> [0,1], y -> unit variance (same logic as ssj_mle).
+  # lambda ~ [x]^3 => lambda_norm = lambda / x_range^3.
+  x_range    <- x[n] - x[1L]
+  x_min_s    <- x[1L]
+  y_scale    <- sdy
+  if (x_range < .Machine$double.eps) stop("'x' has zero range")
+  x          <- (x - x_min_s) / x_range
+  y          <- y / y_scale
+  delta      <- delta / x_range
+  last_delta <- last_delta / x_range
+  lambda_orig <- lambda
+  lambda      <- lambda / x_range^3
+  maxsum_orig <- maxsum
+  maxsum      <- maxsum / x_range
+  vy  <- 1.0; sdy <- 1.0; vdy <- vdy / y_scale^2
+
+  # Normalise parinit = [sigma, gamma_1,...,gamma_{n-1}] to scaled units
+  if (!is.null(parinit)) {
+    parinit[1L]   <- parinit[1L] * x_range^1.5 / y_scale   # sigma:  orig -> norm
+    parinit[2L:n] <- parinit[2L:n] / x_range                # gamma:  orig -> norm
+  }
 
   # Pre-allocate KF/smoother arrays — modified in place by llt_delta
   var_eps      <- numeric(n)
@@ -225,19 +247,20 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     opt                = opt,
     nobs               = n,
     df                 = df,
-    maxsum             = maxsum,
+    maxsum             = maxsum_orig,
     loglik             = loglik,
-    pars               = c(sigma = opt$solution[1], lambda = lambda),
-    gamma              = opt$solution[2:n],
+    pars               = c(sigma  = opt$solution[1L] * y_scale / x_range^1.5,
+                           lambda = lambda_orig),
+    gamma              = opt$solution[2L:n] * x_range,
     ic                 = c(aic  =  2 * (df - loglik),
                            aicc =  2 * (df * n / (n - df - 1) - loglik),
                            bic  =  bic_val,
                            hq   =  2 * (log(log(n)) * df - loglik),
                            ebic =  ebic_val),
-    smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1)],
+    smoothed_level     = (a1 + p11 * r1 + p12 * r2)[-(n + 1L)] * y_scale,
     var_smoothed_level = (p11 - p11^2 * n11 - 2 * p11 * p12 * n12 -
-                            p12^2 * n22)[-(n + 1)],
-    x                  = x
+                            p12^2 * n22)[-(n + 1L)] * y_scale^2,
+    x                  = x * x_range + x_min_s
   )
 }
 
@@ -253,8 +276,8 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' @param y vector with the y (missing values allowed).
 #' @param x vector with the x (no missing values allowed).
 #' @param lambda smoothing constant (positive scalar).
-#' @param grid numeric vector of maxsum values to search; default spans 0 to
-#'   10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).
+#' @param grid numeric vector of maxsum values to search; default is 21 equally
+#'   spaced values from 0 to the x range.
 #' @param ic string: information criterion for selection ("bic", "ebic"
 #'   (recommended when jumps are expected to be rare relative to the n-1
 #'   candidate locations -- see \code{ebic_xi}), "hq", "aic", "aicc").
@@ -276,10 +299,8 @@ ssj_kfs <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #'
 #' @export
 auto_ssj_kfs <- function(y, x, lambda,
-                         grid = seq(0,
-                                    sd(y, na.rm = TRUE) / mean(diff(x)) * 10,
-                                    sd(y, na.rm = TRUE) / mean(diff(x)) / 10),
-                         ic = c("bic", "ebic", "hq", "aic", "aicc"),
+                         grid = seq(0, max(x) - min(x), length.out = 21L),
+                         ic = c("ebic", "bic", "hq", "aic", "aicc"),
                          edf = TRUE, last_delta = 1, ebic_xi = 1) {
   ic          <- match.arg(ic)
   last_ic     <- Inf

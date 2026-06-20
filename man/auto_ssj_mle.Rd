@@ -8,8 +8,7 @@ using maximum-likelihood estimation of sigma, lambda and the time-warps}
 auto_ssj_mle(
   y,
   x,
-  grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
-    TRUE)/mean(diff(x))/10),
+  grid = seq(0, max(x) - min(x), length.out = 21L),
   ic = c("ebic", "bic", "hq", "aic", "aicc"),
   edf = TRUE,
   last_delta = 1,

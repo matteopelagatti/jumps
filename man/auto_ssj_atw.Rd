@@ -9,9 +9,8 @@ auto_ssj_atw(
   y,
   x,
   lambda,
-  grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
-    TRUE)/mean(diff(x))/10),
-  ic = c("bic", "ebic", "hq", "aic", "aicc"),
+  grid = seq(0, max(x) - min(x), length.out = 21L),
+  ic = c("ebic", "bic", "hq", "aic", "aicc"),
   max_iter = 100,
   tol = 1e-04,
   learning_rate = 0.1,
@@ -25,8 +24,8 @@ auto_ssj_atw(
 
 \item{lambda}{smoothing constant;}
 
-\item{grid}{numeric vector containing the grid for the argument \code{maxsum}
-of the \code{ssj_atw} function;}
+\item{grid}{numeric vector of maxsum values (in x units) to search; default
+is 21 equally spaced values from 0 to the x range;}
 
 \item{ic}{string with information criterion for the choice: the default is
 "bic", but "ebic" (recommended when jumps are expected to be rare relative
