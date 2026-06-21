@@ -63,9 +63,6 @@ active_gamma <- function(gamma, x) {
   h <- mean(diff(sort(x)))
   gamma > pmax(max(gamma) * 0.05, 0.30 * h)
 }
-make_maxsum_grid <- function(y, x, n = 21L) {
-  seq(0, sd(y, na.rm = TRUE) / mean(diff(x)), length.out = n)
-}
 
 # ============================================================
 # Simulation
@@ -85,7 +82,6 @@ for (s in seq_along(sigmas)) {
     x      <- sort(runif(N))
     y      <- g1(x) + rnorm(N, sd = sigma)
     midpts <- (x[-N] + x[-1L]) / 2L
-    msg    <- make_maxsum_grid(y, x)
 
     # --- CSSD ---
     fit_cssd <- tryCatch(
@@ -102,7 +98,7 @@ for (s in seq_along(sigmas)) {
     }
 
     # --- MLE ---
-    mle <- tryCatch(auto_ssj_mle(y, x, grid = msg), error = function(e) NULL)
+    mle <- tryCatch(auto_ssj_mle(y, x), error = function(e) NULL)
     if (!is.null(mle)) {
       fits_mle[r, ] <- approx(mle$x, mle$smoothed_level,
                                xout = x_grid, method = "linear", rule = 2L)$y
@@ -111,14 +107,14 @@ for (s in seq_along(sigmas)) {
       disc_mle[[r]] <- numeric(0L)
     }
 
-    # --- ATW (MLE-piloted lambda) ---
-    # Warning: lambda is frequently near-zero for g1-type signals (see header).
-    # ATW then returns 0 detected jumps and a pure smooth in most realisations.
-    lam_atw <- if (!is.null(mle)) mle$pars["lambda"] else 1e-3
-    atw <- tryCatch(
-      auto_ssj_atw(y, x, lambda = lam_atw, grid = msg),
-      error = function(e) NULL
-    )
+    # --- ATW (MLE-piloted lambda, EBIC selects maxsum) ---
+    atw <- if (!is.null(mle))
+      tryCatch(
+        auto_ssj_atw(y, x, lambda = mle$pars["lambda"],
+                     ic = "ebic", ebic_xi = 0.5),
+        error = function(e) NULL
+      )
+    else NULL
     if (!is.null(atw)) {
       fits_atw[r, ] <- approx(atw$x, atw$smoothed_level,
                                xout = x_grid, method = "linear", rule = 2L)$y
@@ -148,6 +144,12 @@ for (s in seq_along(sigmas)) {
     samp           = samp,
     rmse           = c(cssd = rmse_cssd, atw = rmse_atw, mle = rmse_mle),
     n_correct      = c(cssd = n_correct_cssd, atw = n_correct_atw, mle = n_correct_mle),
+    mean_cssd      = colMeans(fits_cssd, na.rm = TRUE),
+    mean_atw       = colMeans(fits_atw,  na.rm = TRUE),
+    mean_mle       = colMeans(fits_mle,  na.rm = TRUE),
+    mse_cssd       = colMeans((fits_cssd - true_mat)^2, na.rm = TRUE),
+    mse_atw        = colMeans((fits_atw  - true_mat)^2, na.rm = TRUE),
+    mse_mle        = colMeans((fits_mle  - true_mat)^2, na.rm = TRUE),
     q_cssd         = apply(fits_cssd, 2L, quantile, c(.025, .975), na.rm = TRUE),
     q_atw          = apply(fits_atw,  2L, quantile, c(.025, .975), na.rm = TRUE),
     q_mle          = apply(fits_mle,  2L, quantile, c(.025, .975), na.rm = TRUE),
@@ -186,22 +188,19 @@ cat("Results saved to section3b_results.rds\n")
 
 draw_fit_panel <- function(res, method, col_line,
                             main = "", ylab = "", show_xlab = FALSE) {
-  smp      <- res$samp
-  fit      <- smp[[method]]
+  mn       <- res[[paste0("mean_", method)]]
   q        <- res[[paste0("q_", method)]]
   col_band <- adjustcolor(col_line, alpha.f = 0.20)
-  ylim     <- range(c(smp$y, q, true_line), na.rm = TRUE)
+  ylim     <- range(c(mn, q, true_line), na.rm = TRUE)
   ylim     <- ylim + c(-1, 1) * 0.06 * diff(ylim)
 
-  plot(smp$x, smp$y, pch = 1L, col = "grey55", cex = 0.5,
-       xlim = c(0, 1), ylim = ylim,
+  plot(NA, xlim = c(0, 1), ylim = ylim,
        xlab = if (show_xlab) "x" else "",
        ylab = ylab, main = main, xaxs = "i", las = 1L)
   lines(x_grid, true_line, lty = 2L, col = "grey40", lwd = 0.9)
   polygon(c(x_grid, rev(x_grid)), c(q[1L, ], rev(q[2L, ])),
           col = col_band, border = NA)
-  if (!is.null(fit))
-    lines(fit$x, fit$smoothed_level, col = col_line, lwd = 1.8)
+  lines(x_grid, mn, col = col_line, lwd = 1.8)
   abline(v = true_disc, lty = 3L, col = "grey20")
 }
 
@@ -213,26 +212,29 @@ draw_hist_panel <- function(disc_list, col_line, show_xlab = FALSE) {
              nbins = length(brk) - 1L)
   else
     integer(length(brk) - 1L)
-  plot(NA, xlim = c(0, 1), ylim = c(0, max(cnt, 1L)),
+  plot(NA, xlim = c(0, 1), ylim = c(0, n_rep),
        xaxs = "i", yaxs = "i",
        xlab = if (show_xlab) "x" else "", ylab = "",
        main = "", axes = FALSE)
   rect(brk[-length(brk)], 0L, brk[-1L], cnt,
        col = adjustcolor(col_line, alpha.f = 0.65), border = NA)
   axis(1L, at = c(0, true_disc, 1))
-  axis(2L, las = 1L, at = pretty(c(0L, max(cnt, 1L)), n = 3L))
+  axis(2L, las = 1L, at = pretty(c(0L, n_rep), n = 3L))
   abline(v = true_disc, lty = 3L, col = "grey20")
 }
 
 methods   <- c("cssd",       "atw",         "mle")
-meth_labs <- c("CSSD (CV)",  "ATW (MLE-λ)", "MLE")
+meth_labs <- list(
+  "CSSD (CV)",
+  quote("ATW (MLE-" * lambda * ")"),
+  "MLE"
+)
 col_lines <- c("steelblue",  "darkgreen",   "darkorange3")
-sig_labs  <- paste0("σ = ", sigmas)
 
 for (m in seq_along(methods)) {
   meth     <- methods[m]
   col_line <- col_lines[m]
-  lab      <- meth_labs[m]
+  lab      <- meth_labs[[m]]
   fname    <- paste0("fig_g1hi_", meth, ".pdf")
 
   pdf(file.path(script_dir, fname), width = 10, height = 6)
@@ -243,7 +245,7 @@ for (m in seq_along(methods)) {
 
   for (s in seq_along(sigmas)) {
     draw_fit_panel(results[[s]], method = meth, col_line = col_line,
-                   main = paste0(lab, "  (", sig_labs[s], ")"),
+                   main = bquote(.(lab) * "  (" * sigma * " = " * .(sigmas[s]) * ")"),
                    ylab = if (s == 1L) "y" else "")
   }
   par(mar = c(3, 3.5, 0.3, 0.5))
@@ -268,10 +270,10 @@ op <- par(mar = c(1.5, 3.5, 2.5, 0.5), mgp = c(2, 0.5, 0),
 for (m in seq_along(methods)) {
   meth     <- methods[m]
   col_line <- col_lines[m]
-  lab      <- meth_labs[m]
+  lab      <- meth_labs[[m]]
   for (s in seq_along(sigmas)) {
     draw_fit_panel(results[[s]], method = meth, col_line = col_line,
-                   main = paste0(lab, "  (", sig_labs[s], ")"),
+                   main = bquote(.(lab) * "  (" * sigma * " = " * .(sigmas[s]) * ")"),
                    ylab = if (s == 1L) "y" else "")
   }
   par(mar = c(3, 3.5, 0.3, 0.5))
@@ -286,3 +288,63 @@ for (m in seq_along(methods)) {
 par(op)
 dev.off()
 cat("Saved fig_g1hi_combined.pdf\n")
+
+# ====================================================================
+# Figure: pointwise Bias and MSE (2 rows x 3 columns, all sigma levels)
+# ====================================================================
+
+sigma_ltys <- c(1L, 2L, 4L)
+
+bias_list <- lapply(seq_along(methods), function(m)
+  lapply(results, function(res)
+    res[[paste0("mean_", methods[m])]] - true_line))
+
+mse_list <- lapply(seq_along(methods), function(m)
+  lapply(results, function(res) res[[paste0("mse_", methods[m])]]))
+
+bias_ylim <- local({
+  r <- range(unlist(bias_list), na.rm = TRUE)
+  max(abs(r)) * c(-1.1, 1.1)
+})
+mse_ylim  <- c(0, max(unlist(mse_list), na.rm = TRUE) * 1.1)
+
+sig_labs  <- as.expression(lapply(sigmas, function(s) bquote(sigma == .(s))))
+
+pdf(file.path(script_dir, "fig_g1hi_bias_mse.pdf"), width = 10, height = 5.5)
+layout(matrix(seq_len(6L), nrow = 2L, ncol = 3L, byrow = TRUE))
+op <- par(mgp = c(2.4, 0.55, 0), tcl = -0.25, cex = 0.85, cex.main = 0.95)
+
+# Row 1: Bias
+par(mar = c(1.5, 3.8, 2.5, 0.5))
+for (m in seq_along(methods)) {
+  col_line <- col_lines[m]
+  lab      <- meth_labs[[m]]
+  plot(NA, xlim = c(0, 1), ylim = bias_ylim,
+       xlab = "", ylab = if (m == 1L) "Bias" else "",
+       main = bquote(.(lab)), xaxs = "i", las = 1L)
+  abline(h = 0, col = "grey70", lwd = 0.8)
+  abline(v = true_disc, lty = 3L, col = "grey20")
+  for (s in seq_along(sigmas))
+    lines(x_grid, bias_list[[m]][[s]], col = col_line,
+          lty = sigma_ltys[s], lwd = 1.5)
+  if (m == 1L)
+    legend("bottomright", legend = sig_labs, lty = sigma_ltys,
+           col = col_line, lwd = 1.5, bty = "n", cex = 0.78)
+}
+
+# Row 2: MSE
+par(mar = c(3.5, 3.8, 0.8, 0.5))
+for (m in seq_along(methods)) {
+  col_line <- col_lines[m]
+  plot(NA, xlim = c(0, 1), ylim = mse_ylim,
+       xlab = "x", ylab = if (m == 1L) "MSE" else "",
+       xaxs = "i", las = 1L, main = "")
+  abline(v = true_disc, lty = 3L, col = "grey20")
+  for (s in seq_along(sigmas))
+    lines(x_grid, mse_list[[m]][[s]], col = col_line,
+          lty = sigma_ltys[s], lwd = 1.5)
+}
+
+par(op)
+dev.off()
+cat("Saved fig_g1hi_bias_mse.pdf\n")
