@@ -265,8 +265,8 @@ for (m in seq_along(methods)) {
   fname    <- paste0("fig_", meth, ".pdf")
   has_disc <- meth != "ss"
 
-  pdf(file.path(script_dir, fname), width = 10,
-      height = if (has_disc) 6 else 3.5)
+  pdf(file.path(script_dir, fname), width = 7,
+      height = if (has_disc) 4.5 else 2.5)
   if (has_disc) {
     layout(matrix(seq_len(6L), nrow = 2L, ncol = 3L, byrow = TRUE),
            heights = c(3.5, 1.8))
@@ -304,10 +304,11 @@ for (m in seq_along(methods)) {
 # 7 rows x 3 cols: 3 pairs (curve/hist) then 1 curve-only row for SS
 # ====================================================================
 
-pdf(file.path(script_dir, "fig_combined.pdf"), width = 10, height = 17)
+pdf(file.path(script_dir, "fig_combined.pdf"), width = 7, height = 9)
 mat <- matrix(seq_len(21L), nrow = 7L, ncol = 3L, byrow = TRUE)
-layout(mat, heights = c(rep(c(3.5, 1.8), 3L), 3.5))
+layout(mat, heights = c(rep(c(3.5, 1.8), 3L), 4.3))
 op <- par(mgp = c(2, 0.5, 0), tcl = -0.25, cex = 0.80, cex.main = 0.93)
+
 
 for (m in seq_along(methods)) {
   meth     <- methods[m]
@@ -359,7 +360,7 @@ mse_ylim  <- c(0, max(unlist(mse_list), na.rm = TRUE) * 1.1)
 
 sig_labs  <- as.expression(lapply(sigmas, function(s) bquote(sigma == .(s))))
 
-pdf(file.path(script_dir, "fig_bias_mse.pdf"), width = 13, height = 5.5)
+pdf(file.path(script_dir, "fig_bias_mse.pdf"), width = 8, height = 4)
 layout(matrix(seq_len(8L), nrow = 2L, ncol = 4L, byrow = TRUE))
 op <- par(mgp = c(2.4, 0.55, 0), tcl = -0.25, cex = 0.85, cex.main = 0.95)
 

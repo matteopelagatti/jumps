@@ -22,3 +22,30 @@
 #' }
 #' @source Eurostat
 "employed_IT"
+
+#' Hourly electricity load of Northern Italy and temperature of Milan
+#'
+#' The dataset start on 2023-01-01 01:00:00 and ends at 2025-09-30 23:00:00.
+#' The hourly electricity load for Northern Italy has been downloaded from
+#' the FTP of the GME (mercatoelettrico.org).
+#' The temperature has been dowloaded form the Open-Meteo site
+#' (archive-api.open-meteo.com) with latitude 45.4642 and longitude 9.1900.
+#' The load is in MWh and the temperature is in Celsius degrees.
+#'
+#' @docType data
+#'
+#' @usage data(load_temp)
+#'
+#' @format An object of class \code{data.frame} with three columns:
+#' #' \describe{
+#'   \item{Datetime}{A "POSIXct" object with day and hour.}
+#'   \item{Load}{The electricity load of Northern Italy in MWh.}
+#'   \item{Temperature}{The temperature of Milan in Celsius degrees.}
+#' }
+#'
+#' @keywords datasets
+#'
+#' @source \href{https://www.mercatoelettrico.org/}{GME},
+#' \href{https://archive-api.open-meteo.com}{Open-Meteo}
+#'
+"load_temp"
