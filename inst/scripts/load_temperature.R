@@ -37,7 +37,7 @@ head(df_temperature)
 ## ==========================================
 
 
-df_load <- read.csv("MGPquant_20230101_20260407.csv")
+df_load <- read.csv("./inst/scripts/MGPquant_20230101_20260407.csv")
 
 df_load$Data <- as.Date(as.character(df_load$Data), format = "%Y%m%d")
 df_load <-
@@ -54,7 +54,7 @@ df <- df |> rename(Celsius = temperatura_C)
 # FINAL SELECTION
 df |>
   filter(wday(datetime, week_start = 1) %in% (2:4), # TUE, WED, THU
-         month(datetime) %in% c(1:2, 5:7, 9:11),    # NO VACATION MONTHS
+         month(datetime) %in% c(2:3, 5:7, 9:11),    # NO VACATION MONTHS
          hour(datetime) %in% c(10:15),              # CENTRAL HOURS
          MWh > 15000, Celsius < 35) |>              # LIMIT EXTREMES
   select(Celsius, MWh) ->
