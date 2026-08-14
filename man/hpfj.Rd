@@ -2,44 +2,52 @@
 % Please edit documentation in R/hpfj.R
 \name{hpfj}
 \alias{hpfj}
-\title{HP filter with automatic jumps detection.}
+\title{HP filter with automatic jump detection}
 \usage{
 hpfj(y, maxsum = sd(y), edf = TRUE, parinit = NULL)
 }
 \arguments{
-\item{y}{vector with the time series;}
+\item{y}{numeric vector with the time series (missing values allowed).}
 
-\item{maxsum}{maximum sum of additional level standard deviations;}
+\item{maxsum}{maximum sum of additional level standard deviations.}
 
-\item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
-the number of degrees of freedom in the LASSO-regression way;}
+\item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
+are computed, otherwise the number of degrees of freedom is computed in the
+LASSO-regression way.}
 
-\item{parinit}{either NULL or vector of 3+n parameters with starting values for the
-optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-square root of gamma, n additional std deviations for the slope.}
+\item{parinit}{either \code{NULL} or a numeric vector of \code{3+n} starting
+values for the optimizer; the order of the parameters is sd(slope
+disturbance), sd(observation noise), square root of gamma, and \code{n}
+additional standard deviations for the level.}
 }
 \value{
-list with the following slots:
+A list with the following slots:
 \itemize{
- \item opt: the output of the optimization function (nloptr)
- \item nobs: number of observations
- \item df: number of estimated parameters (model's degrees of freedom)
- \item loglik: value of the log-likelihood at maximum
- \item ic: vector of information criteria (aic, aicc, bic, hq)
- \item smoothed_level: vector with smoothed level with jumps (hp filter with jumps)
- \item var_smoothed_level: variance of the smoothed level
+ \item \code{opt}: the output of the optimization function (\code{nloptr}).
+ \item \code{nobs}: number of non-missing observations.
+ \item \code{df}: model's degrees of freedom.
+ \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{loglik}: value of the log-likelihood at the maximum.
+ \item \code{pars}: named vector (sigma_slope, sigma_noise, gamma).
+ \item \code{sigmas}: additional standard deviations of the level
+   disturbance.
+ \item \code{weights}: effective-degrees-of-freedom weights, or \code{NULL}
+   when \code{edf = FALSE}.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+ \item \code{smoothed_level}: vector with the smoothed level with jumps (HP
+   filter with jumps).
+ \item \code{var_smoothed_level}: variance of the smoothed level.
 }
 }
 \description{
-This is the lower-level function for the HP filter with jumps.
-The user should use the \code{hpj} function instead, unless in need of more control
-and speed. The function estimates the HP filter with jumps.
-Jumps happen contextually in the level and in the slope: the standard deviation
-of the slope disturbance is \eqn{\gamma} times the standard deviation of the
-level disturbance at time \eqn{t}.
-The HP smoothing parameter \eqn{\lambda} is estimated via MLE (assuming normally
-distributed disturbances) as in Wahba (1978):
-\eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
+Lower-level function for the Hodrick-Prescott filter with jumps. Most users
+should call \code{\link{hpj}} instead, unless they need more control and
+speed. Jumps happen contextually in the level and in the slope: the standard
+deviation of the slope disturbance is \eqn{\gamma} times the standard
+deviation of the level disturbance at time \eqn{t}. The HP smoothing
+parameter \eqn{\lambda} is estimated by maximum likelihood (assuming normally
+distributed disturbances) as in Wahba (1978): \eqn{\lambda =
+\sigma^2_\varepsilon / \sigma^2_\zeta}.
 }
 \examples{
 set.seed(202311)
@@ -50,10 +58,14 @@ plot(y, type = "l")
 lines(mu, col = "blue")
 hp <- hpfj(y, 60)
 lines(hp$smoothed_level, col = "red")
+
 }
 \references{
-Whaba (1978)
-"Improper priors, spline smoothing and the problem of guarding against model errors in regression",
-*Journal of the Royal Statistical Society. Series B*, Vol. 40(3), pp. 364-372.
-DOI:10.1111/j.2517-6161.1978.tb01050.x
+Wahba, G. (1978). Improper priors, spline smoothing and the problem of
+guarding against model errors in regression. \emph{Journal of the Royal
+Statistical Society. Series B}, \strong{40}(3), 364--372.
+\doi{10.1111/j.2517-6161.1978.tb01050.x}
+}
+\seealso{
+\code{\link{hpj}}, \code{\link{auto_hpfj}}, \code{\link{hpfj_fix}}.
 }

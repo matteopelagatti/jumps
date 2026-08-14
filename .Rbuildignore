@@ -5,3 +5,19 @@
 ^\.github$
 ^LICENSE$
 ^\.claude$
+^\.Rhistory$
+^Read-and-delete-me$
+^cran-comments\.md$
+# Reference papers and working files kept in the repository but not shipped
+^.*\.pdf$
+^section3_results\.rds$
+# Replication material: the .R scripts are shipped, the bulky inputs/outputs
+# and intermediate results are not (they would blow up the tarball size).
+^inst/scripts/.*\.csv$
+^inst/scripts/.*\.rds$
+^inst/scripts/.*\.pdf$
+# Rendered vignettes are rebuilt by R CMD build
+^vignettes/.*\.html$
+^vignettes/.*_files$
+^vignettes/[^/]*\.R$
+^data-raw$

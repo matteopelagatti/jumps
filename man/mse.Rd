@@ -7,14 +7,18 @@
 mse(y, x)
 }
 \arguments{
-\item{y}{vector}
+\item{y}{numeric vector.}
 
-\item{x}{vector}
+\item{x}{numeric vector of the same length as \code{y}.}
 }
 \value{
-The scalar mean squared difference/error.
+The scalar mean squared difference (error).
 }
 \description{
-It computes the mean squared difference between the elements
-of the vectors x and y.
+Computes the mean squared difference between the elements of the vectors
+\code{y} and \code{x}.
+}
+\examples{
+mse(1:3, 2:4)
+
 }

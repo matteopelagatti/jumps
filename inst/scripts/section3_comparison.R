@@ -40,40 +40,6 @@ true_disc <- c(0.3, 0.4, 0.6)
 true_line <- g1(x_grid)
 
 # ====================================================================
-# Helper: 5-fold CV lambda selection for ssj_cssd (TV denoising)
-# ====================================================================
-# The TV penalty with unweighted D (entries +/-1) uses lambda directly as
-# the soft threshold on absolute first differences.  The smooth Bessel signal
-# contributes differences of order max|g1'|*h ~ 0.2 (for h~0.01), which
-# overlaps the jump amplitudes 0.3-0.6.  The fixed-formula "2*sigma" rule
-# is therefore too tight; k-fold CV learns the right threshold from data.
-#
-# Lambda grid: spans from just below the noise floor (sigma*sqrt(2)~0.07)
-# to well above the largest jump (0.6), on a log scale.
-lambda_grid_tv <- exp(seq(log(0.02), log(1.5), length.out = 25L))
-
-cssd_cv_lambda <- function(y, x,
-                            lambda_grid = lambda_grid_tv,
-                            k_folds     = 5L, ...) {
-  n       <- length(y)
-  fold_id <- sample(rep(seq_len(k_folds), length.out = n))
-  cv_err  <- vapply(lambda_grid, function(lam) {
-    err <- 0
-    for (fold in seq_len(k_folds)) {
-      tr     <- which(fold_id != fold)
-      te     <- which(fold_id == fold)
-      ord_tr <- order(x[tr])
-      fit  <- ssj_cssd(y[tr][ord_tr], x[tr][ord_tr], lambda = lam, ...)
-      pred <- approx(fit$x, fit$smoothed_level,
-                     xout = x[te], method = "constant", rule = 2L)$y
-      err  <- err + sum((y[te] - pred)^2, na.rm = TRUE)
-    }
-    err
-  }, numeric(1L))
-  lambda_grid[which.min(cv_err)]
-}
-
-# ====================================================================
 # Jump-threshold helper
 # ====================================================================
 # Two complementary thresholds are used:
@@ -102,8 +68,8 @@ for (s in seq_along(sigmas)) {
   sigma <- sigmas[s]
   cat("  sigma =", sigma, "\n")
 
-  fits_tv  <- fits_atw <- fits_mle <- fits_ss <- matrix(NA_real_, n_rep, length(x_grid))
-  disc_tv  <- disc_atw <- disc_mle <- vector("list", n_rep)
+  fits_cssd <- fits_atw <- fits_mle <- fits_ss <- matrix(NA_real_, n_rep, length(x_grid))
+  disc_cssd <- disc_atw <- disc_mle <- vector("list", n_rep)
   samp <- NULL
 
   for (r in seq_len(n_rep)) {
@@ -117,12 +83,12 @@ for (s in seq_along(sigmas)) {
       error = function(e) NULL
     )
     if (!is.null(fit_cssd)) {
-      fits_tv[r, ] <- predict_cssd_potts(fit_cssd, x_grid,
-                                          y_orig = y, x_orig = x,
-                                          delta = sigma)
-      disc_tv[[r]] <- fit_cssd$disc_locs
+      fits_cssd[r, ] <- predict_cssd_potts(fit_cssd, x_grid,
+                                           y_orig = y, x_orig = x,
+                                           delta = sigma)
+      disc_cssd[[r]] <- fit_cssd$disc_locs
     } else {
-      disc_tv[[r]] <- numeric(0L)
+      disc_cssd[[r]] <- numeric(0L)
     }
 
     # --- MLE ---
@@ -156,36 +122,36 @@ for (s in seq_along(sigmas)) {
       fits_ss[r, ] <- predict(fit_ss, x_grid)$y
 
     if (r == 1L)
-      samp <- list(x = x, y = y, tv = fit_cssd, atw = atw, mle = mle, ss = fit_ss)
+      samp <- list(x = x, y = y, cssd = fit_cssd, atw = atw, mle = mle, ss = fit_ss)
 
     if (r %% 20L == 0L) cat("    rep", r, "/", n_rep, "\n")
   }
 
   true_mat <- matrix(true_line, nrow = n_rep, ncol = length(x_grid), byrow = TRUE)
-  rmse_tv  <- sqrt(mean((fits_tv  - true_mat)^2, na.rm = TRUE))
-  rmse_atw <- sqrt(mean((fits_atw - true_mat)^2, na.rm = TRUE))
-  rmse_mle <- sqrt(mean((fits_mle - true_mat)^2, na.rm = TRUE))
-  rmse_ss  <- sqrt(mean((fits_ss  - true_mat)^2, na.rm = TRUE))
+  rmse_cssd <- sqrt(mean((fits_cssd - true_mat)^2, na.rm = TRUE))
+  rmse_atw  <- sqrt(mean((fits_atw  - true_mat)^2, na.rm = TRUE))
+  rmse_mle  <- sqrt(mean((fits_mle  - true_mat)^2, na.rm = TRUE))
+  rmse_ss   <- sqrt(mean((fits_ss   - true_mat)^2, na.rm = TRUE))
 
   results[[s]] <- list(
-    sigma    = sigma,
-    samp     = samp,
-    rmse     = c(cssd = rmse_tv, atw = rmse_atw, mle = rmse_mle, ss = rmse_ss),
-    mean_tv  = colMeans(fits_tv,  na.rm = TRUE),
-    mean_atw = colMeans(fits_atw, na.rm = TRUE),
-    mean_mle = colMeans(fits_mle, na.rm = TRUE),
-    mean_ss  = colMeans(fits_ss,  na.rm = TRUE),
-    mse_tv   = colMeans((fits_tv  - true_mat)^2, na.rm = TRUE),
-    mse_atw  = colMeans((fits_atw - true_mat)^2, na.rm = TRUE),
-    mse_mle  = colMeans((fits_mle - true_mat)^2, na.rm = TRUE),
-    mse_ss   = colMeans((fits_ss  - true_mat)^2, na.rm = TRUE),
-    q_tv     = apply(fits_tv,  2L, quantile, c(.025, .975), na.rm = TRUE),
-    q_atw    = apply(fits_atw, 2L, quantile, c(.025, .975), na.rm = TRUE),
-    q_mle    = apply(fits_mle, 2L, quantile, c(.025, .975), na.rm = TRUE),
-    q_ss     = apply(fits_ss,  2L, quantile, c(.025, .975), na.rm = TRUE),
-    disc_tv  = disc_tv,
-    disc_atw = disc_atw,
-    disc_mle = disc_mle
+    sigma     = sigma,
+    samp      = samp,
+    rmse      = c(cssd = rmse_cssd, atw = rmse_atw, mle = rmse_mle, ss = rmse_ss),
+    mean_cssd = colMeans(fits_cssd, na.rm = TRUE),
+    mean_atw  = colMeans(fits_atw,  na.rm = TRUE),
+    mean_mle  = colMeans(fits_mle,  na.rm = TRUE),
+    mean_ss   = colMeans(fits_ss,   na.rm = TRUE),
+    mse_cssd  = colMeans((fits_cssd - true_mat)^2, na.rm = TRUE),
+    mse_atw   = colMeans((fits_atw  - true_mat)^2, na.rm = TRUE),
+    mse_mle   = colMeans((fits_mle  - true_mat)^2, na.rm = TRUE),
+    mse_ss    = colMeans((fits_ss   - true_mat)^2, na.rm = TRUE),
+    q_cssd    = apply(fits_cssd, 2L, quantile, c(.025, .975), na.rm = TRUE),
+    q_atw     = apply(fits_atw,  2L, quantile, c(.025, .975), na.rm = TRUE),
+    q_mle     = apply(fits_mle,  2L, quantile, c(.025, .975), na.rm = TRUE),
+    q_ss      = apply(fits_ss,   2L, quantile, c(.025, .975), na.rm = TRUE),
+    disc_cssd = disc_cssd,
+    disc_atw  = disc_atw,
+    disc_mle  = disc_mle
   )
   cat("    CSSD done (sigma =", sigma, ")\n")
 }
@@ -249,7 +215,7 @@ draw_hist_panel <- function(disc_list, col_line, show_xlab = FALSE) {
 # Figures: one 2 x 3 PDF per method
 # ====================================================================
 
-methods   <- c("tv",        "atw",                        "mle",         "ss")
+methods   <- c("cssd",      "atw",                        "mle",         "ss")
 meth_labs <- list(
   "CSSD (CV)",
   quote("ATW (MLE-" * lambda * ")"),

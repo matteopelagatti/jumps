@@ -3,7 +3,7 @@
 \name{auto_ssj_mle}
 \alias{auto_ssj_mle}
 \title{Automatic selection of the optimal time-warping smoothing spline with jumps
-using maximum-likelihood estimation of sigma, lambda and the time-warps}
+using maximum-likelihood estimation}
 \usage{
 auto_ssj_mle(
   y,
@@ -16,43 +16,55 @@ auto_ssj_mle(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
-\item{grid}{numeric vector of maxsum values to search; default spans 0 to
-10*sd(y)/mean(diff(x)) in steps of sd(y)/(10*mean(diff(x))).}
+\item{grid}{numeric vector of \code{maxsum} values to search; the default is
+21 equally spaced values from 0 to the range of \code{x}.}
 
-\item{ic}{string: information criterion for selection. Default "ebic"
-(recommended when jumps are expected to be rare relative to the n-1
-candidate locations -- see \code{ebic_xi}); "bic", "hq", "aic" and
-"aicc" are also available.}
+\item{ic}{string with the information criterion used for the choice: the
+default is \code{"ebic"} (recommended when jumps are expected to be rare
+relative to the \code{n-1} candidate locations, see \code{ebic_xi}), but
+\code{"bic"}, \code{"hq"}, \code{"aic"} and \code{"aicc"} are also
+available.}
 
-\item{edf}{logical: passed to \code{ssj_mle} (default TRUE).}
+\item{edf}{logical: passed to \code{\link{ssj_mle}} (default \code{TRUE}).}
 
-\item{last_delta}{numeric scalar: passed to \code{ssj_mle} (default 1).}
+\item{last_delta}{numeric scalar: passed to \code{\link{ssj_mle}}
+(default 1).}
 
-\item{ebic_xi}{numeric scalar in [0,1] passed to \code{ssj_mle}: strength
-of the Extended-BIC search penalty (default 1; only relevant when
-\code{ic = "ebic"}).}
+\item{ebic_xi}{numeric scalar in \code{[0,1]} passed to
+\code{\link{ssj_mle}}: strength of the extended-BIC search penalty
+(default 1; only relevant when \code{ic = "ebic"}).}
 }
 \value{
-The output of \code{ssj_mle} corresponding to the best IC.
+The output of the \code{\link{ssj_mle}} function corresponding to
+  the best choice according to the selected information criterion.
 }
 \description{
-Runs \code{ssj_mle} over a grid of \code{maxsum} values and returns the
-solution with the lowest selected information criterion. Unlike
-\code{auto_ssj_kfs}/\code{auto_ssj_atw}, lambda is not part of the grid: it
-is estimated by maximum likelihood inside every \code{ssj_mle} call, so
-only maxsum needs to be searched. Each grid point is warm-started from the
-previous optimum (sigma, lambda and gamma). The search stops early when the
-IC increases for three consecutive grid values.
+Runs \code{\link{ssj_mle}} over a grid of \code{maxsum} values and returns
+the solution with the lowest value of the selected information criterion.
+Unlike \code{\link{auto_ssj_kfs}} and \code{\link{auto_ssj_atw}},
+\code{lambda} is not part of the grid: it is estimated by maximum likelihood
+inside every \code{ssj_mle} call, so that only \code{maxsum} has to be
+searched.
+}
+\details{
+The pure smooth (\code{maxsum = 0}) is fitted first: its smoothed level
+disturbances are large exactly where the smooth model is "surprised" by a
+sudden level change, and are used to allocate the \code{maxsum} budget
+proportionally, giving the optimizer a warm start at the right locations.
+The search stops early when the criterion increases for three consecutive
+grid values.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)
 of_mle <- auto_ssj_mle(y = faithful$waiting,
                        x = faithful$eruptions)
-lines(x = sort(faithful$eruptions),
-      y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
+lines(x = of_mle$x, y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
 
+}
+\seealso{
+\code{\link{ssj_mle}}.
 }

@@ -2,48 +2,57 @@
 % Please edit documentation in R/hpfj_fix.R
 \name{hpfj_fix}
 \alias{hpfj_fix}
-\title{HP filter with automatic jumps detection and fixed smoothing constant}
+\title{HP filter with automatic jump detection and fixed smoothing constant}
 \usage{
-hpfj_fix(y, lambda, maxsum = sd(y), edf = TRUE, parinit = NULL)
+hpfj_fix(y, lambda, maxsum = sd(y, na.rm = TRUE), edf = TRUE, parinit = NULL)
 }
 \arguments{
-\item{y}{vector with the time series}
+\item{y}{numeric vector with the time series (missing values allowed).}
 
-\item{lambda}{either a numeric scalar with the smoothing constant or
-a string with the frequency of the time series to be selected among
-c("daily", "weekly", "monthly", "quarterly", "annual"); in this case the
-values of the smoothing constant are computed according to Ravn and Uhlig (2002),
-that is, \eqn{6.25 s^4}, where $s$ is the number of observations per year.}
+\item{lambda}{either a numeric scalar with the smoothing constant, or a
+string with the frequency of the time series, one of \code{"daily"},
+\code{"weekly"}, \code{"monthly"}, \code{"quarterly"}, \code{"annual"}; in
+the latter case the smoothing constant is computed according to Ravn and
+Uhlig (2002), that is \eqn{6.25 s^4}, where \eqn{s} is the number of
+observations per year.}
 
-\item{maxsum}{maximum sum of additional level standard deviations;}
+\item{maxsum}{maximum sum of additional level standard deviations.}
 
-\item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
-the number of degrees of freedom in the LASSO-regression way.}
+\item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
+are computed, otherwise the number of degrees of freedom is computed in the
+LASSO-regression way.}
 
-\item{parinit}{either NULL or vector of 3+n parameters with starting values for the
-optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-square root of gamma, n additional std deviations for the slope}
+\item{parinit}{either \code{NULL} or a numeric vector of \code{2+n} starting
+values for the optimizer; the order of the parameters is sd(slope
+disturbance), square root of gamma, and \code{n} additional standard
+deviations for the level.}
 }
 \value{
-list with the following slots:
+A list with the following slots:
 \itemize{
- \item opt: the output of the optimization function (nloptr)
- \item nobs: number of observations
- \item df: number of estimated parameters (model's degrees of freedom)
- \item loglik: value of the log-likelihood at maximum
- \item ic: vector of information criteria (aic, aicc, bic, hq)
- \item smoothed_level: vector with smoothed level with jumps (hp filter with jumps)
- \item var_smoothed_level: variance of the smoothed level
+ \item \code{opt}: the output of the optimization function (\code{nloptr}).
+ \item \code{nobs}: number of observations.
+ \item \code{df}: model's degrees of freedom.
+ \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{loglik}: value of the log-likelihood at the maximum.
+ \item \code{pars}: named vector (sigma_slope, sigma_noise, gamma).
+ \item \code{sigmas}: additional standard deviations of the level
+   disturbance.
+ \item \code{weights}: effective-degrees-of-freedom weights, or \code{NULL}
+   when \code{edf = FALSE}.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+ \item \code{smoothed_level}: vector with the smoothed level with jumps (HP
+   filter with jumps).
+ \item \code{var_smoothed_level}: variance of the smoothed level.
 }
 }
 \description{
-This is the lower-level function for the HP filter with jumps with fixed smoothing
-parameter. The user should use the \code{hpj} function instead, unless in need of
-more control and speed. The function estimates the HP filter with jumps.
-Jumps happen contextually in the level and in the slope: the standard deviation
-of the slope disturbance is \eqn{\gamma} times the standard deviation of the
-level disturbance at time \eqn{t}.
-In this case the HP smoothing parameter \eqn{\lambda} is fixed by the user and
+Lower-level function for the Hodrick-Prescott filter with jumps and a fixed
+smoothing parameter. Most users should call \code{\link{hpj}} instead, unless
+they need more control and speed. Jumps happen contextually in the level and
+in the slope: the standard deviation of the slope disturbance is
+\eqn{\gamma} times the standard deviation of the level disturbance at time
+\eqn{t}. Here the HP smoothing parameter \eqn{\lambda} is fixed by the user,
 so that \eqn{\sigma^2_\varepsilon = \lambda\sigma^2_\zeta}.
 }
 \examples{
@@ -55,4 +64,13 @@ plot(y, type = "l")
 lines(mu, col = "blue")
 hp <- hpfj_fix(y, 60, 60)
 lines(hp$smoothed_level, col = "red")
+
+}
+\references{
+Ravn, M. O. and Uhlig, H. (2002). On adjusting the Hodrick-Prescott filter
+for the frequency of observations. \emph{The Review of Economics and
+Statistics}, \strong{84}(2), 371--376. \doi{10.1162/003465302317411604}
+}
+\seealso{
+\code{\link{hpj}}, \code{\link{auto_hpfj_fix}}, \code{\link{hpfj}}.
 }

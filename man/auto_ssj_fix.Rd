@@ -2,8 +2,8 @@
 % Please edit documentation in R/ssj_fix.R
 \name{auto_ssj_fix}
 \alias{auto_ssj_fix}
-\title{Automatic selection of the optimal smoothing spline function with jumps
-and fixed smoothing parameter}
+\title{Automatic selection of the optimal smoothing spline with jumps and fixed
+smoothing parameter}
 \usage{
 auto_ssj_fix(
   y,
@@ -17,43 +17,49 @@ auto_ssj_fix(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
-\item{lambda}{smoothing constant;}
+\item{lambda}{numeric scalar with the smoothing parameter.}
 
-\item{grid}{numeric vector containing the grid for the argument \code{maxsum}
-of the \code{ssj_fix} function;}
+\item{grid}{numeric vector containing the grid for the argument
+\code{maxsum} of the \code{\link{ssj_fix}} function.}
 
-\item{ic}{string with information criterion for the choice: the default is
-"bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available;}
+\item{ic}{string with the information criterion used for the choice: the
+default is \code{"bic"} (simulations show this is the best choice), but
+\code{"hq"}, \code{"aic"} and \code{"aicc"} are also available.}
 
-\item{edf}{logical scalar: TRUE (default) if the number of degrees of freedom
-should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
-to a more traditional way (although not supported by theory) when FALSE.}
+\item{edf}{logical: \code{TRUE} (default) if the number of degrees of freedom
+should be computed as "effective degrees of freedom" (Efron, 1986), as
+opposed to a more traditional way (although not supported by theory) when
+\code{FALSE}.}
 
 \item{last_delta}{numeric scalar with the difference \eqn{x_{n+1}-x_{n}}; not
 relevant for most applications and defaults to 1.}
 }
 \value{
-The ouput of the \code{ssj_fix} function corresponding to the best
-choice according to the selected information criterion.
+The output of the \code{\link{ssj_fix}} function corresponding to
+  the best choice according to the selected information criterion.
 }
 \description{
-The regularization parameter for the HP filter with jumps is the
-maximal sum of standard deviations added to the static std.dev. This value
-has to be passed to the \code{ssj_fix} function. The function \code{auto_ssj_fix}
-runs \code{ssj_fix} on a grid of regularization constants and returns the
-output of \code{ssj_fix} according to the chosen information criterion.
+The regularization parameter is the maximal sum of standard deviations added
+to the static standard deviation. This value has to be passed to the
+\code{\link{ssj_fix}} function. \code{auto_ssj_fix} runs \code{ssj_fix} on a
+grid of regularization constants and returns the output of \code{ssj_fix}
+selected by the chosen information criterion.
 }
 \examples{
+# a short, explicit grid keeps the example fast; the default grid has 101
+# points and is correspondingly slower
 plot(faithful$eruptions, faithful$waiting)
 of_jum <- auto_ssj_fix(y = faithful$waiting,
                        x = faithful$eruptions,
-                       lambda = 1)
-lines(x = sort(faithful$eruptions),
-      y = of_jum$smoothed_level, col = "red", lwd = 2)
+                       lambda = 1,
+                       grid = seq(0, 400, length.out = 5))
+lines(x = of_jum$x, y = of_jum$smoothed_level, col = "red", lwd = 2)
 
+}
+\seealso{
+\code{\link{ssj_fix}}.
 }

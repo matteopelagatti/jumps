@@ -8,41 +8,46 @@ constant}
 auto_hpfj_fix(
   y,
   lambda,
-  grid = seq(0, sd(y) * 10, sd(y)/10),
+  grid = seq(0, sd(y, na.rm = TRUE) * 10, sd(y, na.rm = TRUE)/10),
   ic = c("bic", "hq", "aic", "aicc"),
   edf = TRUE
 )
 }
 \arguments{
-\item{y}{numeric vector cotaining the time series;}
+\item{y}{numeric vector containing the time series (missing values allowed).}
 
-\item{lambda}{smoothing constant;}
+\item{lambda}{smoothing constant; see \code{\link{hpfj_fix}} for the
+accepted values.}
 
-\item{grid}{numeric vector containing the grid for the argument \code{maxsum}
-of the \code{hpfj} function;}
+\item{grid}{numeric vector containing the grid for the argument
+\code{maxsum} of the \code{\link{hpfj_fix}} function.}
 
-\item{ic}{string with information criterion for the choice: the default is
-"bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available;}
+\item{ic}{string with the information criterion used for the choice: the
+default is \code{"bic"} (simulations show this is the best choice), but
+\code{"hq"}, \code{"aic"} and \code{"aicc"} are also available.}
 
-\item{edf}{logical scalar: TRUE (default) if the number of degrees of freedom
-should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
-to a more traditional way (although not supported by theory) when FALSE.}
+\item{edf}{logical: \code{TRUE} (default) if the number of degrees of freedom
+should be computed as "effective degrees of freedom" (Efron, 1986), as
+opposed to a more traditional way (although not supported by theory) when
+\code{FALSE}.}
 }
 \value{
-The ouput of the \code{hpjf} function corresponding to the best
-choice according to the selected information criterion.
+The output of the \code{\link{hpfj_fix}} function corresponding to
+  the best choice according to the selected information criterion.
 }
 \description{
-The regularization constant for the HP filter with jumps is the
-maximal sum of standard deviations for the level disturbance. This value
-has to be passed to the \code{hpfj_fix} function. The function \code{auto_hpfj_fix}
-runs \code{hpfj_fix} on a grid of regularization constants and returns the
-output of \code{hpfj_fix} according to the chosen information criterion.
+The regularization constant for the HP filter with jumps is the maximal sum
+of standard deviations of the level disturbance. This value has to be passed
+to the \code{\link{hpfj_fix}} function. \code{auto_hpfj_fix} runs
+\code{hpfj_fix} on a grid of regularization constants and returns the output
+of \code{hpfj_fix} selected by the chosen information criterion.
 }
 \examples{
 mod <- auto_hpfj_fix(Nile, "annual")
-plot(as.numeric(Nile))
-lines(mod$smoothed_level)
+plot(as.numeric(Nile), type = "l")
+lines(mod$smoothed_level, col = "red")
 
+}
+\seealso{
+\code{\link{hpfj_fix}}, \code{\link{hpj}}.
 }

@@ -2,8 +2,8 @@
 % Please edit documentation in R/ssj_fix.R
 \name{ssj_fix}
 \alias{ssj_fix}
-\title{Smoothing splines with with automatic jumps detection and
-fixed smoothing parameter}
+\title{Smoothing splines with automatic jump detection and fixed smoothing
+parameter}
 \usage{
 ssj_fix(
   y,
@@ -16,40 +16,55 @@ ssj_fix(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
-\item{lambda}{a numeric scalar with the smoothing parameter.}
+\item{lambda}{numeric scalar with the smoothing parameter.}
 
-\item{maxsum}{maximum sum of additional standard deviations.}
+\item{maxsum}{maximum sum of the additional standard deviations. Note that
+this parameterises the jumps through the disturbance variances, so, unlike
+the budget of \code{\link{ssj_mle}}, \code{\link{ssj_kfs}} and
+\code{\link{ssj_atw}}, it is \emph{not} expressed in the units of \code{x}.}
 
-\item{edf}{boolean if TRUE computes effective degrees of freedom otherwise computes
-the number of degrees of freedom in the LASSO-regression way.}
+\item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
+are computed, otherwise the number of degrees of freedom is computed in the
+LASSO-regression way.}
 
-\item{parinit}{either NULL or vector of 1+n parameters with the starting values for the
-optimizer; the order of the parameters is the constant std. dev and
-n additional std. devs.}
+\item{parinit}{either \code{NULL} or a numeric vector of \code{1+n} starting
+values for the optimizer; the order of the parameters is the constant
+standard deviation followed by \code{n} additional standard deviations.}
 
-\item{last_delta}{numeric scalar with the difference \eqn{x_{n+1}-x_{n}}; it is
-not relevant for most applications and defaults to 1.}
+\item{last_delta}{numeric scalar with the difference \eqn{x_{n+1}-x_{n}}; it
+is not relevant for most applications and defaults to 1.}
 }
 \value{
-list with the following slots:
+An object of class \code{ssj} (a list, so that all the slots below
+  remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+  \code{\link[=plot.ssj]{plot}} method. Its slots are:
 \itemize{
- \item opt: the output of the optimization function (nloptr)
- \item nobs: number of observations
- \item df: model's degrees of freedom
- \item loglik: value of the log-likelihood at maximum
- \item ic: vector of information criteria (aic, aicc, bic, hq)
- \item smoothed_level: vector with smoothing splines with jumps
- \item var_smoothed_level: vector with variances of the smoothing splines
- \item x: the ordered x variable
+ \item \code{opt}: the output of the optimization function (\code{nloptr}).
+ \item \code{nobs}: number of observations.
+ \item \code{df}: model's degrees of freedom.
+ \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{loglik}: value of the log-likelihood at the maximum.
+ \item \code{pars}: named vector (sigma, lambda).
+ \item \code{sigmas}: additional standard deviations of the level
+   disturbance.
+ \item \code{weights}: effective-degrees-of-freedom weights, or \code{NULL}
+   when \code{edf = FALSE}.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+ \item \code{smoothed_level}: vector with the smoothing spline with jumps.
+ \item \code{var_smoothed_level}: vector with the variances of the smoothing
+   spline.
+ \item \code{x}: the ordered \code{x} variable.
 }
 }
 \description{
-This is the lower-level function for the smoothing splines with jumps and fixed
-smoothing parameter.
+Lower-level function for smoothing splines with jumps and a fixed smoothing
+parameter. The additional variance of the level disturbance at each sampling
+site is estimated by constrained maximum likelihood, using the Kalman filter
+and smoother on the state-space form of the cubic smoothing spline.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)
@@ -57,7 +72,10 @@ of_jum <- ssj_fix(y = faithful$waiting,
                   x = faithful$eruptions,
                   lambda = 1,
                   maxsum = 150)
-lines(x = sort(faithful$eruptions),
-      y = of_jum$smoothed_level, col = "red", lwd = 2)
-      
+lines(x = of_jum$x, y = of_jum$smoothed_level, col = "red", lwd = 2)
+
+}
+\seealso{
+\code{\link{auto_ssj_fix}}, \code{\link{ssj_kfs}},
+  \code{\link{ssj_mle}}, \code{\link{ssj_atw}}.
 }

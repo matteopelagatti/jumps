@@ -14,47 +14,57 @@ hpj(
 )
 }
 \arguments{
-\item{y}{either a numeric vector or a time series object containing the time series to filter;}
+\item{y}{either a numeric vector or a time series object (\code{ts},
+\code{zoo}, \code{xts}, \code{timeSeries}) containing the time series to
+filter.}
 
-\item{maxsum}{maximum sum of additional level standard deviations,
-if \code{NULL} the value is selected automatically on a grid using the specified information criterion (ic);}
+\item{maxsum}{maximum sum of additional level standard deviations; if
+\code{NULL} (default), the value is selected automatically on a grid using
+the information criterion \code{ic}.}
 
-\item{lambda}{smoothing constant of the HP filter,
-if \code{NULL} the value is estimated by maximum likelihood;}
+\item{lambda}{smoothing constant of the HP filter; if \code{NULL} (default),
+the value is estimated by maximum likelihood.}
 
-\item{xreg}{matrix of regressors;}
+\item{xreg}{matrix of regressors. Not supported yet: passing a non-\code{NULL}
+value raises an error. Use \code{\link{hpfjx}} for the (still experimental)
+version with regressors.}
 
-\item{ic}{string with information criterion for the automatic choice of \code{maxsum}:
-the default is "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available.}
+\item{ic}{string with the information criterion used for the automatic choice
+of \code{maxsum}: the default is \code{"bic"} (simulations show this is the
+best choice), but \code{"hq"}, \code{"aic"} and \code{"aicc"} are also
+available.}
 
-\item{scl}{scaling factor for the time series (default is 1000): the time series
-is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
-starting values for the optimization seem to work well in this scale);
-If `scl` is set equal to the string `"original"` the time series is not rescaled.}
+\item{scl}{scaling factor for the time series (default 1000): the series is
+rescaled as \code{(y - min(y))/(max(y) - min(y))*scl}, since the default
+starting values of the optimizer work well on this scale. If \code{scl} is
+the string \code{"original"}, the series is not rescaled.}
 }
 \value{
-S3 object of class hpj with the following slots:
+An S3 object of class \code{hpj} with the following slots:
 \itemize{
- \item y: the input time series;
- \item maxsum: the maximum sum of additional standard deviations;
- \item lambda: the smoothing constant of the HP filter;
- \item pars: vector of estimated parameters (sigma_slope, sigma_noise, gamma);
- \item hpj: the time series of the HP filter with jumps;
- \item hpj_std: the time series of the HP filter with jumps standard deviations;
- \item std_devs: vector of additional standard deviations of the level disturbance;
- \item breaks: vector of indices of the breaks;
- \item xreg: matrix of regressors;
- \item df: model's degrees of freedom;
- \item loglik: value of the log-likelihood at maximum;
- \item ic: vector of information criteria (aic, aicc, bic, hq);
- \item opt: the output of the optimization function (nloptr);
- \item call: the call to the function.
+ \item \code{y}: the input time series.
+ \item \code{maxsum}: the maximum sum of additional standard deviations.
+ \item \code{lambda}: the smoothing constant of the HP filter.
+ \item \code{pars}: vector of estimated parameters (sigma_slope, sigma_noise,
+   gamma).
+ \item \code{hpj}: the time series of the HP filter with jumps.
+ \item \code{hpj_std}: the time series of the standard deviations of the HP
+   filter with jumps.
+ \item \code{breaks}: vector of indices of the detected breaks.
+ \item \code{sigmas}: vector of additional standard deviations of the level
+   disturbance.
+ \item \code{xreg}: matrix of regressors (always \code{NULL} in this version).
+ \item \code{df}: model's degrees of freedom.
+ \item \code{loglik}: value of the log-likelihood at the maximum.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+ \item \code{opt}: the output of the optimization function (\code{nloptr}).
+ \item \code{call}: the call to the function.
 }
 }
 \description{
-This function is a wrapper for the various Hodrick-Prescott filters with jumps functions.
-The end user should use this: it is simpler and more flexible than the other functions.
+Wrapper for the various Hodrick-Prescott filters with jumps. The end user
+should call this function: it is simpler and more flexible than the
+lower-level \code{hpfj*} functions.
 }
 \examples{
 set.seed(202311)
@@ -62,5 +72,11 @@ n <- 100
 mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
 y <- mu + rnorm(n, sd = 20)
 hp <- hpj(y, 50)
-plot(hp)
+print(hp)
+plot(hp, use_ggplot = FALSE)
+
+}
+\seealso{
+\code{\link{hpfj}}, \code{\link{hpfj_fix}}, \code{\link{plot.hpj}},
+  \code{\link{print.hpj}}.
 }

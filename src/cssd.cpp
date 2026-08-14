@@ -26,10 +26,12 @@ static VectorXd soft_thresh(const VectorXd& v, double t) {
   return v.array().sign() * (v.array().abs() - t).cwiseMax(0.0);
 }
 
-//' ADMM solver for TV denoising with irregular sampling
+//' ADMM solver for total-variation denoising with irregular sampling
 //'
-//' Solves min_u (1/2)||y - u||^2 + lambda*||Du||_1 where D is the weighted
-//' first-difference matrix with (Du)_i = (u_{i+1} - u_i) / dx_i.
+//' Solves min_u (1/2)||y - u||^2 + lambda*||Du||_1, where D is the *unweighted*
+//' first-difference matrix, (Du)_i = u_{i+1} - u_i.  The x values are only used
+//' to check that the sample sites are strictly increasing; see the note below
+//' on why the 1/dx weighting is not applied.
 //' The system (I + rho*D'D) is factorized once and reused every iteration.
 //'
 //' @param y_in numeric vector of length n (no NAs).
@@ -40,6 +42,7 @@ static VectorXd soft_thresh(const VectorXd& v, double t) {
 //'   but not the solution (default 1.0).
 //'
 //' @return Numeric vector u of length n: the piecewise-constant minimizer.
+//' @noRd
 // [[Rcpp::export]]
 NumericVector cssd_irregular_eigen(NumericVector y_in, NumericVector x_in,
                                    double lambda,

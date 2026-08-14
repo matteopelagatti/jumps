@@ -2,11 +2,11 @@
 % Please edit documentation in R/cssd.R
 \name{auto_ssj_cssd}
 \alias{auto_ssj_cssd}
-\title{Automatic CSSD with K-fold cross-validation parameter selection}
+\title{Automatic CSSD with K-fold cross-validation of the parameters}
 \usage{
 auto_ssj_cssd(
   y,
-  x,
+  x = NULL,
   k_folds = 5L,
   delta = 1,
   p_init = 0.99,
@@ -15,27 +15,62 @@ auto_ssj_cssd(
 )
 }
 \arguments{
-\item{y}{numeric vector of observations (no NAs).}
+\item{y}{numeric vector of observations (no missing values).}
 
-\item{x}{numeric vector of sampling locations.}
+\item{x}{numeric vector of sampling locations (no missing values). If
+\code{NULL} (default), regular spacing \code{1:n} is assumed.}
 
-\item{k_folds}{number of CV folds (default 5, as in the paper).}
+\item{k_folds}{number of cross-validation folds (default 5, as in the
+paper).}
 
-\item{delta}{noise std dev: scalar or vector of length \code{n} (default 1).}
+\item{delta}{positive scalar or vector of length \code{n} with the noise
+standard deviations (default 1).}
 
 \item{p_init}{initial stiffness (default 0.99, as in the paper).}
 
 \item{gamma_init}{initial jump penalty (default 1, as in the paper).}
 
-\item{maxit}{maximum Nelder-Mead iterations (default 200).}
+\item{maxit_nm}{maximum number of Nelder-Mead iterations (default 200).}
 }
 \value{
-The output of \code{ssj_cssd_potts} at the CV-optimal \eqn{(p,\gamma)}.
+The output of \code{\link{ssj_cssd_potts}} at the cross-validated
+  optimal \eqn{(p,\gamma)}, with two extra slots:
+\itemize{
+  \item \code{cv_score}: the minimised cross-validation score.
+  \item \code{cv_par}: named vector with the selected \code{p} and
+    \code{gamma}.
+}
 }
 \description{
-Selects the stiffness parameter \eqn{p} and jump-count penalty \eqn{\gamma}
-jointly by K-fold cross-validation, as in Section 3.4 of Storath &
-Weinmann (2024). Optimisation uses Nelder-Mead over
-\eqn{(\log p/(1-p),\, \log\gamma)} starting from \eqn{p_0 = 0.99,
-\gamma_0 = 1}.
+Selects the stiffness parameter \eqn{p} and the jump-count penalty
+\eqn{\gamma} jointly by K-fold cross-validation, as in Section 3.4 of Storath
+and Weinmann (2024). A coarse two-dimensional grid search over
+\eqn{(p,\gamma)} is followed by a Nelder-Mead refinement on the
+reparameterised scale \eqn{(\mathrm{logit}(p), \mathrm{logit}(q))}, with
+\eqn{\gamma = p\,q/(1-q)}.
+}
+\details{
+The fold assignment is drawn with \code{\link[base]{sample}}, so the result
+depends on the state of the random number generator: call
+\code{\link[base]{set.seed}} beforehand for reproducible output. Note also
+that the underlying solver is \eqn{O(n^2)} in both time and memory, and that
+the cross-validation calls it \code{k_folds} times per grid point.
+}
+\examples{
+set.seed(1)
+x   <- sort(runif(60))
+y   <- sin(4 * pi * x) + c(rep(0, 30), rep(1, 30)) + rnorm(60, sd = 0.1)
+fit <- auto_ssj_cssd(y, x)
+fit$cv_par
+plot(x, y)
+lines(fit$x, fit$smoothed_level, col = "darkgreen", lwd = 2)
+
+}
+\references{
+Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
+signals. \emph{Journal of Computational and Graphical Statistics},
+\strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
+}
+\seealso{
+\code{\link{ssj_cssd_potts}}, \code{\link{predict_cssd_potts}}.
 }

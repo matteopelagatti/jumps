@@ -1,55 +1,79 @@
-#' Smoothing splines with automatic jump detection via time-warping and
+#' Smoothing splines with automatic jump detection via time warping and
 #' Kalman filter-smoother estimation
 #'
 #' Implements the state-space time-warping model described in the companion
 #' paper. The effective inter-observation interval \eqn{\tau_t = \delta_t +
 #' \gamma_t} replaces the fixed spacing in both the transition matrix and the
-#' process-noise covariance, so jump detection reduces to finding the optimal
-#' \eqn{\boldsymbol\gamma} by maximum likelihood.  The analytical gradient of
-#' the log-likelihood with respect to \eqn{\gamma_t} is obtained through the
-#' Koopman-Shephard (2003) score formula applied to the Kalman smoother output.
-#' The optimisation is carried out with the gradient-based CCSAQ algorithm from
-#' the NLopt library.
+#' process-noise covariance, so that jump detection reduces to finding the
+#' optimal \eqn{\gamma} by maximum likelihood.
 #'
-#' @param y vector with the y (missing values allowed).
-#' @param x vector with the x (no missing values allowed).
+#' The analytical gradient of the log-likelihood with respect to \eqn{\gamma_t}
+#' is obtained through the Koopman-Shephard (2003) score formula applied to the
+#' Kalman smoother output, plus an extra term accounting for \eqn{\gamma_t}
+#' entering the transition matrix. The optimisation is carried out with the
+#' gradient-based AUGLAG/LBFGS algorithms of the NLopt library, with a fallback
+#' to CCSAQ whenever the KKT conditions are not satisfied at the reported
+#' optimum.
+#'
+#' @param y numeric vector with the response (missing values allowed).
+#' @param x numeric vector with the covariate (no missing values allowed).
 #' @param lambda positive scalar smoothing parameter (ratio of observation to
 #'   process noise variance).
-#' @param maxsum maximum sum of \eqn{\gamma_t} (time-warp budget).
-#' @param edf logical: if TRUE (default) computes effective degrees of freedom
-#'   as the trace of the hat matrix; if FALSE counts non-zero \eqn{\gamma_t}.
-#' @param parinit NULL or a numeric vector of length n with starting values for
-#'   the optimizer (sigma, gamma_1, ..., gamma_{n-1}); pass the previous
-#'   solution for warm-starting.
+#' @param maxsum maximum sum of the \eqn{\gamma_t}, that is the warping budget
+#'   \eqn{M} of the constraint \eqn{\sum_t \gamma_t \le M}. It is expressed in
+#'   the units of \code{x} and defaults to the range of \code{x}, the same
+#'   upper end as the grid searched by \code{\link{auto_ssj_kfs}}.
+#' @param edf logical: if \code{TRUE} (default) the effective degrees of freedom
+#'   are computed as the trace of the hat matrix; if \code{FALSE} the non-zero
+#'   \eqn{\gamma_t} are counted.
+#' @param parinit \code{NULL} or a numeric vector of length \code{n} with
+#'   starting values for the optimizer, namely \eqn{(\sigma, \gamma_1, \ldots,
+#'   \gamma_{n-1})}; pass the previous solution for warm starting.
 #' @param last_delta positive scalar: dummy spacing appended after the last
-#'   observation (does not affect the fit; default 1).
-#' @param ebic_xi numeric scalar in [0,1]: strength of the Extended-BIC penalty
-#'   for searching over the n-1 candidate jump locations (default 1, the
-#'   Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
-#'   plain bic).
-#' @return list with slots:
+#'   observation (it does not affect the fit; default 1).
+#' @param ebic_xi numeric scalar in \code{[0,1]}: strength of the extended-BIC
+#'   penalty for searching over the \code{n-1} candidate jump locations
+#'   (default 1, the Chen and Chen (2008) recommendation for sparse selection;
+#'   0 reduces \code{ebic} to plain \code{bic}).
+#'
+#' @returns An object of class \code{ssj} (a list, so that all the slots below
+#'   remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+#'   \code{\link[=plot.ssj]{plot}} method. Its slots are:
 #' \itemize{
-#'  \item opt: the output of the nloptr optimizer.
-#'  \item nobs: number of observations.
-#'  \item df: model degrees of freedom.
-#'  \item maxsum: the maxsum argument.
-#'  \item loglik: Gaussian log-likelihood at the optimum.
-#'  \item pars: named vector (sigma, lambda).
-#'  \item gamma: estimated time-warp vector of length n-1.
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
-#'  \item smoothed_level: smoothed estimate of f at each x.
-#'  \item var_smoothed_level: pointwise variance of the smoothed level.
-#'  \item x: the ordered x variable.
+#'  \item \code{opt}: the output of the \code{nloptr} optimizer.
+#'  \item \code{nobs}: number of observations.
+#'  \item \code{df}: model's degrees of freedom.
+#'  \item \code{maxsum}: the \code{maxsum} argument.
+#'  \item \code{loglik}: Gaussian log-likelihood at the optimum.
+#'  \item \code{pars}: named vector (sigma, lambda).
+#'  \item \code{gamma}: estimated time-warp vector of length \code{n-1}.
+#'  \item \code{ic}: vector of information criteria (aic, aicc, bic, hq, ebic).
+#'  \item \code{smoothed_level}: smoothed estimate of \eqn{f} at each \code{x}.
+#'  \item \code{var_smoothed_level}: pointwise variance of the smoothed level.
+#'  \item \code{x}: the ordered \code{x} variable.
 #' }
 #'
+#' @references
+#' Chen, J. and Chen, Z. (2008). Extended Bayesian information criteria for
+#' model selection with large model spaces. \emph{Biometrika}, \strong{95}(3),
+#' 759--771. \doi{10.1093/biomet/asn034}
+#'
+#' Koopman, S. J. and Shephard, N. (1992). Exact score for time series models in
+#' state space form. \emph{Biometrika}, \strong{79}(4), 823--826.
+#' \doi{10.1093/biomet/79.4.823}
+#'
+#' @seealso \code{\link{auto_ssj_kfs}}, \code{\link{ssj_mle}},
+#'   \code{\link{ssj_atw}}, \code{\link{ssj_fix}}.
+#'
 #' @examples
+#' # 'maxsum' is a warping budget in the units of x; the range of eruptions
+#' # is about 3.5, so a budget of 1 is already generous.
 #' plot(faithful$eruptions, faithful$waiting)
 #' of_kfs <- ssj_kfs(y = faithful$waiting,
 #'                   x = faithful$eruptions,
 #'                   lambda = 1,
-#'                   maxsum = 150)
-#' lines(x = sort(faithful$eruptions),
-#'       y = of_kfs$smoothed_level, col = "blue", lwd = 2)
+#'                   maxsum = 1)
+#' lines(x = of_kfs$x, y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 #'
 #' @export
 ssj_kfs <- function(y, x, lambda, maxsum = max(x) - min(x),
@@ -58,11 +82,20 @@ ssj_kfs <- function(y, x, lambda, maxsum = max(x) - min(x),
   n1   <- n + 1
   nobs <- sum(!is.na(y))
   vy   <- var(y, na.rm = TRUE)
-  vdy  <- var(diff(y), na.rm = TRUE)
   sdy  <- sqrt(vy)
   ord  <- order(x)
   x    <- x[ord]
   y    <- y[ord]
+  # NB: computed AFTER sorting.  var(diff(y)) is not invariant to the order in
+  # which the observations are supplied, and it scales the diffuse prior on the
+  # slope (p22 below), so taking it on the unsorted y would make the fit depend
+  # on the row order of the input.
+  vdy  <- var(diff(y), na.rm = TRUE)
+  # Force the default of maxsum NOW, while x is still on its original scale.
+  # The default refers to x, and R evaluates it lazily at first use; without
+  # this, the promise would be forced below, after x has been rescaled to
+  # [0, 1], and the budget would silently become 1 instead of the range of x.
+  force(maxsum)
   # delta has length n; the last element is the dummy spacing after y[n]
   delta <- c(diff(x), last_delta)
 
@@ -243,7 +276,7 @@ ssj_kfs <- function(y, x, lambda, maxsum = max(x) - min(x),
   bic_val  <- df * log(n) - 2 * loglik
   ebic_val <- bic_val + 2 * ebic_xi * k_active * log(n - 1)
 
-  list(
+  res <- list(
     opt                = opt,
     nobs               = n,
     df                 = df,
@@ -262,40 +295,46 @@ ssj_kfs <- function(y, x, lambda, maxsum = max(x) - min(x),
                             p12^2 * n22)[-(n + 1L)] * y_scale^2,
     x                  = x * x_range + x_min_s
   )
+  new_ssj(res, method = "kfs", y = y * y_scale, call = match.call())
 }
 
 
 #' Automatic selection of the optimal time-warping smoothing spline with jumps
-#' using the Kalman filter-smoother
+#' using the Kalman filter and smoother
 #'
-#' Runs \code{ssj_kfs} over a grid of \code{maxsum} values and returns the
-#' solution with the lowest selected information criterion.  Each grid point is
-#' warm-started from the previous optimum.  The search stops early when the IC
-#' increases for three consecutive grid values.
+#' Runs \code{\link{ssj_kfs}} over a grid of \code{maxsum} values and returns
+#' the solution with the lowest value of the selected information criterion.
+#' Each grid point is warm-started from the previous optimum, and the search
+#' stops early when the criterion increases for three consecutive grid values.
 #'
-#' @param y vector with the y (missing values allowed).
-#' @param x vector with the x (no missing values allowed).
-#' @param lambda smoothing constant (positive scalar).
-#' @param grid numeric vector of maxsum values to search; default is 21 equally
-#'   spaced values from 0 to the x range.
-#' @param ic string: information criterion for selection ("bic", "ebic"
-#'   (recommended when jumps are expected to be rare relative to the n-1
-#'   candidate locations -- see \code{ebic_xi}), "hq", "aic", "aicc").
-#' @param edf logical: passed to \code{ssj_kfs} (default TRUE).
-#' @param last_delta numeric scalar: passed to \code{ssj_kfs} (default 1).
-#' @param ebic_xi numeric scalar in [0,1] passed to \code{ssj_kfs}: strength
-#'   of the Extended-BIC search penalty (default 1; only relevant when
-#'   \code{ic = "ebic"}).
+#' @param y numeric vector with the response (missing values allowed).
+#' @param x numeric vector with the covariate (no missing values allowed).
+#' @param lambda positive scalar with the smoothing parameter.
+#' @param grid numeric vector of \code{maxsum} values to search; the default is
+#'   21 equally spaced values from 0 to the range of \code{x}.
+#' @param ic string with the information criterion used for the choice: the
+#'   default is \code{"ebic"} (recommended when jumps are expected to be rare
+#'   relative to the \code{n-1} candidate locations, see \code{ebic_xi}), but
+#'   \code{"bic"}, \code{"hq"}, \code{"aic"} and \code{"aicc"} are also
+#'   available.
+#' @param edf logical: passed to \code{\link{ssj_kfs}} (default \code{TRUE}).
+#' @param last_delta numeric scalar: passed to \code{\link{ssj_kfs}}
+#'   (default 1).
+#' @param ebic_xi numeric scalar in \code{[0,1]} passed to
+#'   \code{\link{ssj_kfs}}: strength of the extended-BIC search penalty
+#'   (default 1; only relevant when \code{ic = "ebic"}).
 #'
-#' @returns The output of \code{ssj_kfs} corresponding to the best IC.
+#' @returns The output of the \code{\link{ssj_kfs}} function corresponding to
+#'   the best choice according to the selected information criterion.
+#'
+#' @seealso \code{\link{ssj_kfs}}.
 #'
 #' @examples
 #' plot(faithful$eruptions, faithful$waiting)
 #' of_kfs <- auto_ssj_kfs(y = faithful$waiting,
 #'                        x = faithful$eruptions,
 #'                        lambda = 1)
-#' lines(x = sort(faithful$eruptions),
-#'       y = of_kfs$smoothed_level, col = "blue", lwd = 2)
+#' lines(x = of_kfs$x, y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 #'
 #' @export
 auto_ssj_kfs <- function(y, x, lambda,
@@ -326,5 +365,6 @@ auto_ssj_kfs <- function(y, x, lambda,
       if (n_increases >= 3L) break
     }
   }
+  best$call <- match.call()
   best
 }

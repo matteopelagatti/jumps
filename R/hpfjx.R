@@ -1,48 +1,66 @@
 #' HP filter with jumps and regressors (still experimental)
 #'
-#' This function needs more testing since it does not seem to work as expected.
-#' For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
-#' This is the same as \code{hpfj} but with the possibility of including regressors.
-#' The regressors should be zero-mean so that the HP filter can be interpreted as
-#' a mean value of the time series. 
-#' Jumps happen contextually in the level and in the slope: the standard deviation
-#' of the slope disturbance is \eqn{\gamma} times the standard deviation of the
-#' level disturbance at time \eqn{t}.
-#' The HP smoothing parameter \eqn{\lambda} is estimated via MLE (assuming normally
-#' distributed disturbances) as in Wahba (1978):
-#' \eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
-#' 
-#' @references Whaba (1978)
-#' "Improper priors, spline smoothing and the problem of guarding against model errors in regression",
-#' *Journal of the Royal Statistical Society. Series B*, Vol. 40(3), pp. 364-372.
-#' DOI:10.1111/j.2517-6161.1978.tb01050.x
-#' 
-#' @param y vector with the time series
-#' @param X matrix with regressors in the columns
-#' @param maxsum maximum sum of additional level standard deviations;
-#' @param edf boolean if TRUE computes effective degrees of freedom otherwise computes
-#' the number of degrees of freedom in the LASSO-regression way.
-#' @param parinit either NULL or vector of 3+n parameters with starting values for the
-#' optimizer; the order of the parameters is sd(slope disturbnce), sd(observatio noise),
-#' square root of gamma, n additional std deviations for the slope
-#' @return list with the following slots:
+#' Same as \code{\link{hpfj}}, but with the possibility of including
+#' regressors. The regressors should be zero-mean, so that the HP filter can
+#' still be interpreted as a mean value of the time series. Jumps happen
+#' contextually in the level and in the slope: the standard deviation of the
+#' slope disturbance is \eqn{\gamma} times the standard deviation of the level
+#' disturbance at time \eqn{t}. The HP smoothing parameter \eqn{\lambda} is
+#' estimated by maximum likelihood (assuming normally distributed disturbances)
+#' as in Wahba (1978): \eqn{\lambda = \sigma^2_\varepsilon / \sigma^2_\zeta}.
+#'
+#' This function is still experimental and needs more testing, since it does not
+#' always work as expected. For this reason the wrapper \code{\link{hpj}} does
+#' not allow regressors at the moment.
+#'
+#' @param y numeric vector with the time series (missing values allowed).
+#' @param X numeric matrix with the regressors in the columns.
+#' @param maxsum maximum sum of additional level standard deviations.
+#' @param edf logical: if \code{TRUE} (default) the effective degrees of freedom
+#'   are computed, otherwise the number of degrees of freedom is computed in the
+#'   LASSO-regression way.
+#' @param parinit either \code{NULL} or a numeric vector of \code{3+n+k}
+#'   starting values for the optimizer, where \code{k} is the number of
+#'   regressors; the order of the parameters is sd(slope disturbance),
+#'   sd(observation noise), square root of gamma, \code{n} additional standard
+#'   deviations for the level, and \code{k} regression coefficients.
+#'
+#' @returns A list with the following slots:
 #' \itemize{
-#'  \item opt: the output of the optimization function (nloptr)
-#'  \item nobs: number of observations
-#'  \item df: number of estimated parameters (model's degrees of freedom)
-#'  \item loglik: value of the log-likelihood at maximum
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq)
-#'  \item smoothed_level: vector with smoothed level with jumps (hp filter with jumps)
-#'  \item var_smoothed_level: variance of the smoothed level
+#'  \item \code{opt}: the output of the optimization function (\code{nloptr}).
+#'  \item \code{nobs}: number of observations.
+#'  \item \code{df}: model's degrees of freedom.
+#'  \item \code{maxsum}: the \code{maxsum} argument.
+#'  \item \code{loglik}: value of the log-likelihood at the maximum.
+#'  \item \code{coefficients}: estimated regression coefficients.
+#'  \item \code{pars}: named vector (sigma_slope, sigma_noise, gamma).
+#'  \item \code{sigmas}: additional standard deviations of the level
+#'    disturbance.
+#'  \item \code{weights}: effective-degrees-of-freedom weights, or \code{NULL}
+#'    when \code{edf = FALSE}.
+#'  \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+#'  \item \code{smoothed_level}: vector with the smoothed level with jumps (HP
+#'    filter with jumps).
+#'  \item \code{var_smoothed_level}: variance of the smoothed level.
 #' }
-#' @examples 
+#'
+#' @references
+#' Wahba, G. (1978). Improper priors, spline smoothing and the problem of
+#' guarding against model errors in regression. \emph{Journal of the Royal
+#' Statistical Society. Series B}, \strong{40}(3), 364--372.
+#' \doi{10.1111/j.2517-6161.1978.tb01050.x}
+#'
+#' @seealso \code{\link{hpfj}}, \code{\link{auto_hpfjx}},
+#'   \code{\link{trigseas}}, \code{\link{dummyseas}}.
+#'
+#' @examples
 #' y <- log(AirPassengers)
 #' n <- length(y)
 #' mod <- hpfjx(y, trigseas(n, 12))
-#' hpj <- ts(mod$smoothed_level, start(y), frequency = 12)
+#' trend <- ts(mod$smoothed_level, start(y), frequency = 12)
 #' plot(y)
-#' lines(hpj, col = "red")
-#' 
+#' lines(trend, col = "red")
+#'
 #' @export
 hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
   y <- as.numeric(y)
@@ -194,40 +212,47 @@ hpfjx <- function(y, X, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 }
 
 #' Automatic selection of the optimal HP filter with jumps and regressors
-#' 
-#' This function needs more testing since it does not seem to work as expected.
-#' For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
-#' The regularization constant for the HP filter with jumps is the
-#' maximal sum of standard deviations for the level disturbance. This value
-#' has to be passed to the \code{hpfjx} function. The \code{auto_hpfjx} runs
-#' \code{hpfjx} on a grid of regularization constants and returns the output
-#' of \code{hpfjx} selected by the chosen information criterion.
-#' 
-#' @param y numeric vector cotaining the time series;
-#' @param X numeric matrix with regressors in the columns;
-#' @param grid numeric vector containing the grid for the argument \code{maxsum}
-#' of the \code{hpfj} function;
-#' @param ic string with information criterion for the choice: the default is
-#' "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-#' are available;
-#' @param edf logical scalar: TRUE (default) if the number of degrees of freedom
-#' should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
-#' to a more traditional way (although not supported by theory) when FALSE.
-#' 
-#' @returns The ouput of the \code{hpjf} function corresponding to the best
-#' choice according to the selected information criterion.
-#' 
-#' @examples 
+#'
+#' The regularization constant for the HP filter with jumps is the maximal sum
+#' of standard deviations of the level disturbance. This value has to be passed
+#' to the \code{\link{hpfjx}} function. \code{auto_hpfjx} runs \code{hpfjx} on a
+#' grid of regularization constants and returns the output of \code{hpfjx}
+#' selected by the chosen information criterion.
+#'
+#' This function is still experimental and needs more testing, since it does not
+#' always work as expected. For this reason the wrapper \code{\link{hpj}} does
+#' not allow regressors at the moment.
+#'
+#' @param y numeric vector containing the time series (missing values allowed).
+#' @param X numeric matrix with the regressors in the columns.
+#' @param grid numeric vector containing the grid for the argument
+#'   \code{maxsum} of the \code{\link{hpfjx}} function.
+#' @param ic string with the information criterion used for the choice: the
+#'   default is \code{"bic"} (simulations show this is the best choice), but
+#'   \code{"hq"}, \code{"aic"} and \code{"aicc"} are also available.
+#' @param edf logical: \code{TRUE} (default) if the number of degrees of freedom
+#'   should be computed as "effective degrees of freedom" (Efron, 1986), as
+#'   opposed to a more traditional way (although not supported by theory) when
+#'   \code{FALSE}.
+#'
+#' @returns The output of the \code{\link{hpfjx}} function corresponding to the
+#'   best choice according to the selected information criterion.
+#'
+#' @seealso \code{\link{hpfjx}}, \code{\link{hpfj}}.
+#'
+#' @examples
 #' y <- log(AirPassengers)
 #' n <- length(y)
 #' mod <- auto_hpfjx(y, trigseas(n, 12))
-#' hpj <- ts(mod$smoothed_level, start(y), frequency = 12)
+#' trend <- ts(mod$smoothed_level, start(y), frequency = 12)
 #' plot(y)
-#' lines(hpj, col = "red")
-#' 
+#' lines(trend, col = "red")
+#'
 #' @export
-auto_hpfjx <- function(y, X, grid = seq(0, sd(y)*10, sd(y)/10),
-                      ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
+auto_hpfjx <- function(y, X,
+                       grid = seq(0, sd(y, na.rm = TRUE)*10,
+                                  sd(y, na.rm = TRUE)/10),
+                       ic = c("bic", "hq", "aic", "aicc"), edf = TRUE) {
   if (!is.matrix(X)) X <- as.matrix(X)
   if (length(y) != dim(X)[1]) stop("y and X have a different number of observations")
   ic <- match.arg(ic)

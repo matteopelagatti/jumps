@@ -7,31 +7,34 @@
 trigseas(n, s, harmonics = NULL)
 }
 \arguments{
-\item{n}{length of time series;}
+\item{n}{length of the time series.}
 
-\item{s}{seasonal period;}
+\item{s}{seasonal period.}
 
 \item{harmonics}{vector of harmonics to be used: the cosine and sine
-functions are computed at frequencies \code{2*pi*harmonics/s}, if there
-is an element of \code{harmonics} for which \code{2*pi*harmonics/s} is equal
-to \eqn{\pi} the corresponding sine is omitted.}
+functions are computed at frequencies \code{2*pi*harmonics/s}; if there is
+an element of \code{harmonics} for which \code{2*pi*harmonics/s} equals
+\eqn{\pi}, the corresponding sine is omitted.}
 }
 \value{
-It returns a matrix with n rows and so many columns
-as the harmonics (by default these are \eqn{s-1}).
+A matrix with \code{n} rows and as many columns as the harmonics
+  (by default \eqn{s-1}).
 }
 \description{
-It produces a matrix with seasonal sinusoids to be used as
-regressors. By default, for \eqn{t=1,\ldots,n} and
-\eqn{j = 1, \ldots, \lfloor s/2\rfloor}, it computes
-\deqn{\cos(2\pi j/s), \qquad \sin(2\pi j/s)}.
-Notice that if $s$ is even the sine function at highest
-frequency is omitted because it equals zero for all $t$.
-The used can select a different set of harmonics.
+Produces a matrix of seasonal sinusoids to be used as regressors. By
+default, for \eqn{t = 1, \ldots, n} and \eqn{j = 1, \ldots, \lfloor s/2
+\rfloor}, it computes \deqn{\cos(2\pi j t/s), \qquad \sin(2\pi j t/s).}
+Notice that if \eqn{s} is even the sine function at the highest frequency
+is omitted, because it equals zero for all \eqn{t}. The user can select a
+different set of harmonics.
 }
 \examples{
 y <- log(AirPassengers)
 X <- trigseas(length(y), 12)
-X <- cbind(X, t = 1:length(y))
-reg <- lm(y~X)
+X <- cbind(X, t = seq_along(y))
+reg <- lm(y ~ X)
+
+}
+\seealso{
+\code{\link{dummyseas}} for the seasonal-dummy alternative.
 }

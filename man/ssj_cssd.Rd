@@ -2,40 +2,42 @@
 % Please edit documentation in R/cssd.R
 \name{ssj_cssd}
 \alias{ssj_cssd}
-\title{TV denoising (piecewise-constant smoothing) for irregularly sampled signals}
+\title{Total-variation denoising for irregularly sampled signals}
 \usage{
 ssj_cssd(y, x = NULL, lambda, max_iter = 100L, rho = 1)
 }
 \arguments{
 \item{y}{numeric vector of observations (no missing values).}
 
-\item{x}{numeric vector of sampling locations (no missing values; need
-not be sorted). If \code{NULL} (default), assumes regular spacing
-\code{1:n}.}
+\item{x}{numeric vector of sampling locations (no missing values; it need
+not be sorted). If \code{NULL} (default), regular spacing \code{1:n} is
+assumed.}
 
 \item{lambda}{positive regularization parameter controlling the
-soft-threshold \eqn{\lambda/\rho} applied to first differences of
-\eqn{u}.  Set it strictly above the noise floor
-\eqn{\sigma\sqrt{2}} and below the smallest expected jump amplitude.
-Use \code{\link{cssd_cv_lambda}} or 5-fold cross-validation for
-automatic selection when the smooth-signal variation overlaps the jumps.}
+soft-threshold \eqn{\lambda/\rho} applied to the first differences of
+\eqn{u}. Set it strictly above the noise floor \eqn{\sigma\sqrt{2}} and
+below the smallest expected jump amplitude. When the variation of the
+smooth signal overlaps the jumps, select it by cross-validation.}
 
 \item{max_iter}{maximum number of ADMM iterations (default 100).}
 
-\item{rho}{positive augmented-Lagrangian step size; controls convergence
-speed but does not affect the solution (default 1.0).}
+\item{rho}{positive augmented-Lagrangian step size; it controls the
+convergence speed but not the solution (default 1.0).}
 }
 \value{
-A list with:
+An object of class \code{ssj} (a list, so that all the slots below
+  remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+  \code{\link[=plot.ssj]{plot}} method. Its slots are:
 \itemize{
   \item \code{smoothed_level}: fitted piecewise-constant signal at each
-    (sorted) sample site.
-  \item \code{x}: sorted sample sites.
-  \item \code{nobs}: number of observations used.
+    (sorted) sampling site.
+  \item \code{x}: sorted sampling sites.
+  \item \code{nobs}: number of distinct sampling sites used.
   \item \code{lambda}: the \code{lambda} value used.
-  \item \code{gamma}: absolute first differences \eqn{|u_{i+1} - u_i|}
-    of the fit; entries greater than zero mark detected jump locations.
-    Length \code{nobs - 1}, named by the midpoints \eqn{(x_i + x_{i+1})/2}.
+  \item \code{gamma}: absolute first differences \eqn{|u_{i+1} - u_i|} of the
+    fit; entries greater than zero mark the detected jump locations. It has
+    length \code{nobs - 1} and is named by the midpoints
+    \eqn{(x_i + x_{i+1})/2}.
 }
 }
 \description{
@@ -43,31 +45,38 @@ Solves the total-variation denoising problem
 \deqn{\min_u \frac{1}{2}\|y - u\|_2^2 + \lambda\|Du\|_1,}
 where \eqn{D} is the unweighted first-difference operator
 \eqn{(Du)_i = u_{i+1} - u_i}, using ADMM with a pre-factorized
-\eqn{I + \rho D^\top D} linear system.  The minimizer \eqn{u} is piecewise
-constant, with nonzero first differences at detected jump locations.
+\eqn{I + \rho D^\top D} linear system. The minimizer \eqn{u} is piecewise
+constant, with non-zero first differences at the detected jump locations.
 }
 \details{
-This implements the simplified TV / first-order variant related to the CSSD
-framework of Storath and Weinmann (2024). The full CSSD (piecewise cubic
-smoothing spline with discontinuities) requires a specialized QR-update
-solver; the TV formulation here replaces the \eqn{C^2} roughness penalty
-with an \eqn{\ell_1} penalty on first differences.
+This implements the simplified total-variation (first-order) variant related
+to the CSSD framework of Storath and Weinmann (2024). The full CSSD
+(piecewise cubic smoothing spline with discontinuities) is implemented in
+\code{\link{ssj_cssd_potts}}; the total-variation formulation used here
+replaces the \eqn{C^2} roughness penalty with an \eqn{\ell_1} penalty on
+first differences and is therefore much faster, at the cost of a piecewise
+constant (rather than piecewise cubic) fit.
 
 The unweighted \eqn{D} (entries \eqn{\pm 1}) is used rather than the
 slope-based \eqn{(Du)_i = (u_{i+1}-u_i)/\delta_i}: the \eqn{1/\delta}
 weighting inflates the eigenvalues of \eqn{D^\top D} by \eqn{1/h^2 \sim
-10^4} for \eqn{h\sim 0.01}, which causes the ADMM \eqn{u}-update to drive
-\eqn{u} to nearly zero in the first iteration and stall permanently.
+10^4} for \eqn{h\sim 0.01}, which drives the ADMM \eqn{u}-update towards
+zero in the first iteration and stalls it permanently.
 }
 \examples{
+set.seed(1)
 x   <- sort(runif(100))
 y   <- sin(4 * pi * x) + c(rep(0, 50), rep(1, 50)) + rnorm(100, sd = 0.1)
 fit <- ssj_cssd(y, x, lambda = 5)
-plot(x, y); lines(fit$x, fit$smoothed_level, col = "steelblue", lwd = 2)
+plot(x, y)
+lines(fit$x, fit$smoothed_level, col = "steelblue", lwd = 2)
 
 }
 \references{
 Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
 signals. \emph{Journal of Computational and Graphical Statistics},
 \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
+}
+\seealso{
+\code{\link{ssj_cssd_potts}} for the exact cubic CSSD.
 }
