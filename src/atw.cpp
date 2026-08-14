@@ -87,6 +87,7 @@ void project_simplex_inplace(const VectorXd& v, double budget,
 //'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
 //'     locations on top of the usual bic (see ebic_xi).}
 //' }
+//' @noRd
 // [[Rcpp::export]]
 List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
                             double lambda, double M,

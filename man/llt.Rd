@@ -69,7 +69,7 @@ arbitrary and will be overwritten;}
 \item{i}{vector of the n innovations; values are
 arbitrary and will be overwritten;}
 
-\item{f}{vector of the n innovatoin variances;values are
+\item{f}{vector of the n innovation variances; values are
 arbitrary and will be overwritten;}
 
 \item{r1}{vector of the n+1 smoothers (Th.5.4 in Pelagatti, 2015)
@@ -87,10 +87,10 @@ and slope; values are arbitrary and will be overwritten;}
 \item{n22}{vector of the n+1 variance smoothers (Th.5.4 in Pelagatti, 2015) for the slope
 equation; values are arbitrary and will be overwritten;}
 
-\item{e}{vector of the n+1 observation error smoothers (Th.5.4 in Pelagatti, 2015);
+\item{e}{vector of the n observation error smoothers (Th.5.4 in Pelagatti, 2015);
 values are arbitrary and will be overwritten;}
 
-\item{d}{vector of the n+1 observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
+\item{d}{vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 values are arbitrary and will be overwritten;}
 
 \item{w_}{NULL (default) or vector of n weights for the effect of observation y_t

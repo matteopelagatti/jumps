@@ -2,7 +2,7 @@
 % Please edit documentation in R/ssj_kfs.R
 \name{ssj_kfs}
 \alias{ssj_kfs}
-\title{Smoothing splines with automatic jump detection via time-warping and
+\title{Smoothing splines with automatic jump detection via time warping and
 Kalman filter-smoother estimation}
 \usage{
 ssj_kfs(
@@ -17,64 +17,89 @@ ssj_kfs(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
 \item{lambda}{positive scalar smoothing parameter (ratio of observation to
 process noise variance).}
 
-\item{maxsum}{maximum sum of \eqn{\gamma_t} (time-warp budget).}
+\item{maxsum}{maximum sum of the \eqn{\gamma_t}, that is the warping budget
+\eqn{M} of the constraint \eqn{\sum_t \gamma_t \le M}. It is expressed in
+the units of \code{x} and defaults to the range of \code{x}, the same
+upper end as the grid searched by \code{\link{auto_ssj_kfs}}.}
 
-\item{edf}{logical: if TRUE (default) computes effective degrees of freedom
-as the trace of the hat matrix; if FALSE counts non-zero \eqn{\gamma_t}.}
+\item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
+are computed as the trace of the hat matrix; if \code{FALSE} the non-zero
+\eqn{\gamma_t} are counted.}
 
-\item{parinit}{NULL or a numeric vector of length n with starting values for
-the optimizer (sigma, gamma_1, ..., gamma_{n-1}); pass the previous
-solution for warm-starting.}
+\item{parinit}{\code{NULL} or a numeric vector of length \code{n} with
+starting values for the optimizer, namely \eqn{(\sigma, \gamma_1, \ldots,
+\gamma_{n-1})}; pass the previous solution for warm starting.}
 
 \item{last_delta}{positive scalar: dummy spacing appended after the last
-observation (does not affect the fit; default 1).}
+observation (it does not affect the fit; default 1).}
 
-\item{ebic_xi}{numeric scalar in [0,1]: strength of the Extended-BIC penalty
-for searching over the n-1 candidate jump locations (default 1, the
-Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
-plain bic).}
+\item{ebic_xi}{numeric scalar in \code{[0,1]}: strength of the extended-BIC
+penalty for searching over the \code{n-1} candidate jump locations
+(default 1, the Chen and Chen (2008) recommendation for sparse selection;
+0 reduces \code{ebic} to plain \code{bic}).}
 }
 \value{
-list with slots:
+An object of class \code{ssj} (a list, so that all the slots below
+  remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+  \code{\link[=plot.ssj]{plot}} method. Its slots are:
 \itemize{
- \item opt: the output of the nloptr optimizer.
- \item nobs: number of observations.
- \item df: model degrees of freedom.
- \item maxsum: the maxsum argument.
- \item loglik: Gaussian log-likelihood at the optimum.
- \item pars: named vector (sigma, lambda).
- \item gamma: estimated time-warp vector of length n-1.
- \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
- \item smoothed_level: smoothed estimate of f at each x.
- \item var_smoothed_level: pointwise variance of the smoothed level.
- \item x: the ordered x variable.
+ \item \code{opt}: the output of the \code{nloptr} optimizer.
+ \item \code{nobs}: number of observations.
+ \item \code{df}: model's degrees of freedom.
+ \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{loglik}: Gaussian log-likelihood at the optimum.
+ \item \code{pars}: named vector (sigma, lambda).
+ \item \code{gamma}: estimated time-warp vector of length \code{n-1}.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq, ebic).
+ \item \code{smoothed_level}: smoothed estimate of \eqn{f} at each \code{x}.
+ \item \code{var_smoothed_level}: pointwise variance of the smoothed level.
+ \item \code{x}: the ordered \code{x} variable.
 }
 }
 \description{
 Implements the state-space time-warping model described in the companion
 paper. The effective inter-observation interval \eqn{\tau_t = \delta_t +
 \gamma_t} replaces the fixed spacing in both the transition matrix and the
-process-noise covariance, so jump detection reduces to finding the optimal
-\eqn{\boldsymbol\gamma} by maximum likelihood.  The analytical gradient of
-the log-likelihood with respect to \eqn{\gamma_t} is obtained through the
-Koopman-Shephard (2003) score formula applied to the Kalman smoother output.
-The optimisation is carried out with the gradient-based CCSAQ algorithm from
-the NLopt library.
+process-noise covariance, so that jump detection reduces to finding the
+optimal \eqn{\gamma} by maximum likelihood.
+}
+\details{
+The analytical gradient of the log-likelihood with respect to \eqn{\gamma_t}
+is obtained through the Koopman-Shephard (2003) score formula applied to the
+Kalman smoother output, plus an extra term accounting for \eqn{\gamma_t}
+entering the transition matrix. The optimisation is carried out with the
+gradient-based AUGLAG/LBFGS algorithms of the NLopt library, with a fallback
+to CCSAQ whenever the KKT conditions are not satisfied at the reported
+optimum.
 }
 \examples{
+# 'maxsum' is a warping budget in the units of x; the range of eruptions
+# is about 3.5, so a budget of 1 is already generous.
 plot(faithful$eruptions, faithful$waiting)
 of_kfs <- ssj_kfs(y = faithful$waiting,
                   x = faithful$eruptions,
                   lambda = 1,
-                  maxsum = 150)
-lines(x = sort(faithful$eruptions),
-      y = of_kfs$smoothed_level, col = "blue", lwd = 2)
+                  maxsum = 1)
+lines(x = of_kfs$x, y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 
+}
+\references{
+Chen, J. and Chen, Z. (2008). Extended Bayesian information criteria for
+model selection with large model spaces. \emph{Biometrika}, \strong{95}(3),
+759--771. \doi{10.1093/biomet/asn034}
+
+Koopman, S. J. and Shephard, N. (1992). Exact score for time series models in
+state space form. \emph{Biometrika}, \strong{79}(4), 823--826.
+\doi{10.1093/biomet/79.4.823}
+}
+\seealso{
+\code{\link{auto_ssj_kfs}}, \code{\link{ssj_mle}},
+  \code{\link{ssj_atw}}, \code{\link{ssj_fix}}.
 }

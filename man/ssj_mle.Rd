@@ -2,13 +2,13 @@
 % Please edit documentation in R/ssj_mle.R
 \name{ssj_mle}
 \alias{ssj_mle}
-\title{Smoothing splines with automatic jump detection via time-warping, with
-the smoothing parameter lambda estimated by maximum likelihood}
+\title{Smoothing splines with automatic jump detection via time warping and
+maximum-likelihood estimation of the smoothing parameter}
 \usage{
 ssj_mle(
   y,
   x,
-  maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+  maxsum = max(x) - min(x),
   edf = TRUE,
   parinit = NULL,
   last_delta = 1,
@@ -16,73 +16,101 @@ ssj_mle(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
-\item{maxsum}{maximum sum of \eqn{\gamma_t} (time-warp budget).}
+\item{maxsum}{maximum sum of the \eqn{\gamma_t}, that is the warping budget
+\eqn{M} of the constraint \eqn{\sum_t \gamma_t \le M}. It is expressed in
+the units of \code{x} and defaults to the range of \code{x}, the same
+upper end as the grid searched by \code{\link{auto_ssj_mle}}.}
 
-\item{edf}{logical: if TRUE (default) computes effective degrees of freedom
-as the trace of the hat matrix; if FALSE counts non-zero \eqn{\gamma_t}.}
+\item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
+are computed as the trace of the hat matrix; if \code{FALSE} the non-zero
+\eqn{\gamma_t} are counted.}
 
-\item{parinit}{NULL or a numeric vector of length n+1 with starting values
-for the optimizer (sigma, lambda, gamma_1, ..., gamma_{n-1}); pass the
-previous solution for warm-starting.}
+\item{parinit}{\code{NULL} or a numeric vector of length \code{n+1} with
+starting values for the optimizer, namely \eqn{(\sigma, \lambda, \gamma_1,
+\ldots, \gamma_{n-1})}; pass the previous solution for warm starting.}
 
 \item{last_delta}{positive scalar: dummy spacing appended after the last
-observation (does not affect the fit; default 1).}
+observation (it does not affect the fit; default 1).}
 
-\item{ebic_xi}{numeric scalar in [0,1]: strength of the Extended-BIC penalty
-for searching over the n-1 candidate jump locations (default 1, the
-Chen and Chen 2008 recommendation for sparse selection; 0 reduces ebic to
-plain bic).}
+\item{ebic_xi}{numeric scalar in \code{[0,1]}: strength of the extended-BIC
+penalty for searching over the \code{n-1} candidate jump locations
+(default 1, the Chen and Chen (2008) recommendation for sparse selection;
+0 reduces \code{ebic} to plain \code{bic}).}
 }
 \value{
-list with slots:
+An object of class \code{ssj} (a list, so that all the slots below
+  remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+  \code{\link[=plot.ssj]{plot}} method. Its slots are:
 \itemize{
- \item opt: the output of the nloptr optimizer.
- \item nobs: number of observations.
- \item df: model degrees of freedom.
- \item maxsum: the maxsum argument.
- \item loglik: Gaussian log-likelihood at the optimum.
- \item pars: named vector (sigma, lambda); lambda is now estimated.
- \item gamma: estimated time-warp vector of length n-1.
- \item ic: vector of information criteria (aic, aicc, bic, hq, ebic).
- \item smoothed_level: smoothed estimate of f at each x.
- \item var_smoothed_level: pointwise variance of the smoothed level.
- \item x: the ordered x variable.
+ \item \code{opt}: the output of the \code{nloptr} optimizer.
+ \item \code{nobs}: number of observations.
+ \item \code{df}: model's degrees of freedom.
+ \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{loglik}: Gaussian log-likelihood at the optimum.
+ \item \code{pars}: named vector (sigma, lambda); \code{lambda} is estimated.
+ \item \code{gamma}: estimated time-warp vector of length \code{n-1}.
+ \item \code{ic}: vector of information criteria (aic, aicc, bic, hq, ebic).
+ \item \code{smoothed_level}: smoothed estimate of \eqn{f} at each \code{x}.
+ \item \code{var_smoothed_level}: pointwise variance of the smoothed level.
+ \item \code{dist_level}, \code{dist_slope}: smoothed level and slope
+   disturbances (\code{NULL} when \code{edf = FALSE}).
+ \item \code{std_dist_level}, \code{std_dist_slope}: the corresponding
+   standardised (auxiliary residual) versions.
+ \item \code{x}: the ordered \code{x} variable.
 }
 }
 \description{
-Identical to \code{ssj_kfs} except that \code{lambda} is no longer a fixed
-input: it is a free parameter optimized jointly with sigma and gamma. Since
-lambda enters only the observation variance \eqn{H_t = \lambda\sigma^2} and
-never the transition matrix, its score does not need the extra correction
-that gamma requires -- the plain Koopman-Shephard formula applies directly:
-\eqn{\partial\ell/\partial\lambda = (\sigma^2/2)\sum_t(e_t^2-d_t)}. This
-avoids having to grid-search lambda (which would suffer from the same
-degrees-of-freedom problem as maxsum) on top of the maxsum grid search.
-Internally lambda is optimized via \eqn{\mu=\log\lambda}, which guarantees
-lambda > 0 without a box constraint and avoids the scale instability seen
-when optimizing the raw lambda directly (its sensible range can span
-orders of magnitude, like a variance ratio); the score is a one-line
-chain-rule correction, \eqn{\partial\ell/\partial\mu =
-\lambda\,\partial\ell/\partial\lambda}. \code{parinit} and the returned
-\code{pars} are unaffected and stay in terms of the raw lambda. When
-\code{parinit} is not supplied, the optimizer's success turns out to
-depend on the path it traverses, not just on how close the starting
-lambda looks to the eventual optimum -- so rather than rely on a single
-formula, \code{ssj_mle} tries a handful of starting lambdas spanning
-several orders of magnitude (anchored at a robust, jump-resistant noise
-estimate via \code{mad(diff(y))}) and keeps whichever converges to the
-highest likelihood.
+Identical to \code{\link{ssj_kfs}}, except that \code{lambda} is no longer a
+fixed input: it is a free parameter optimized jointly with \eqn{\sigma} and
+\eqn{\gamma}. This avoids having to grid-search \code{lambda} (which would
+suffer from the same degrees-of-freedom problem as \code{maxsum}) on top of
+the \code{maxsum} grid search.
+}
+\details{
+Since \code{lambda} enters only the observation variance \eqn{H_t =
+\lambda\sigma^2} and never the transition matrix, its score does not need the
+extra correction that \eqn{\gamma} requires: the plain Koopman-Shephard
+formula applies directly, \eqn{\partial\ell/\partial\lambda =
+(\sigma^2/2)\sum_t(e_t^2-d_t)}. Internally \code{lambda} is optimized via
+\eqn{\mu=\log\lambda}, which guarantees \eqn{\lambda > 0} without a box
+constraint and avoids the scale instability observed when optimizing the raw
+\code{lambda} directly (its sensible range can span orders of magnitude, as
+for any variance ratio); the score is then a one-line chain-rule correction,
+\eqn{\partial\ell/\partial\mu = \lambda\,\partial\ell/\partial\lambda}. Both
+\code{parinit} and the returned \code{pars} are unaffected and stay in terms
+of the raw \code{lambda}.
+
+When \code{parinit} is not supplied, the success of the optimizer depends on
+the path it traverses, not just on how close the starting \code{lambda} is to
+the eventual optimum. Rather than relying on a single formula,
+\code{ssj_mle} therefore tries a fixed grid of starting values for
+\code{lambda} spanning several orders of magnitude and keeps whichever
+converges to the highest likelihood.
 }
 \examples{
-plot(faithful$eruptions, faithful$waiting)
-of_mle <- ssj_mle(y = faithful$waiting,
-                  x = faithful$eruptions,
-                  maxsum = 150)
-lines(x = sort(faithful$eruptions),
-      y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
+# 'maxsum' is a warping budget in the units of x; the range of eruptions
+# is about 3.5, so a budget of 1 is already generous.
+# thinned for speed: the full 'faithful' data set works just as well
+fa <- faithful[seq(1, nrow(faithful), by = 3), ]
+plot(fa$eruptions, fa$waiting)
+of_mle <- ssj_mle(y = fa$waiting, x = fa$eruptions, maxsum = 1)
+lines(x = of_mle$x, y = of_mle$smoothed_level, col = "darkgreen", lwd = 2)
 
+}
+\references{
+Chen, J. and Chen, Z. (2008). Extended Bayesian information criteria for
+model selection with large model spaces. \emph{Biometrika}, \strong{95}(3),
+759--771. \doi{10.1093/biomet/asn034}
+
+Koopman, S. J. and Shephard, N. (1992). Exact score for time series models in
+state space form. \emph{Biometrika}, \strong{79}(4), 823--826.
+\doi{10.1093/biomet/79.4.823}
+}
+\seealso{
+\code{\link{auto_ssj_mle}}, \code{\link{ssj_kfs}},
+  \code{\link{ssj_atw}}, \code{\link{ssj_fix}}.
 }

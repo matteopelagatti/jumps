@@ -35,14 +35,17 @@
 #'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
 #'     locations on top of the usual bic (see ebic_xi).}
 #' }
+#' @noRd
 solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol = 1e-4, learning_rate = 0.1, gamma_init = numeric(0), ebic_xi = 1.0) {
     .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi)
 }
 
-#' ADMM solver for TV denoising with irregular sampling
+#' ADMM solver for total-variation denoising with irregular sampling
 #'
-#' Solves min_u (1/2)||y - u||^2 + lambda*||Du||_1 where D is the weighted
-#' first-difference matrix with (Du)_i = (u_{i+1} - u_i) / dx_i.
+#' Solves min_u (1/2)||y - u||^2 + lambda*||Du||_1, where D is the *unweighted*
+#' first-difference matrix, (Du)_i = u_{i+1} - u_i.  The x values are only used
+#' to check that the sample sites are strictly increasing; see the note below
+#' on why the 1/dx weighting is not applied.
 #' The system (I + rho*D'D) is factorized once and reused every iteration.
 #'
 #' @param y_in numeric vector of length n (no NAs).
@@ -53,6 +56,7 @@ solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol =
 #'   but not the solution (default 1.0).
 #'
 #' @return Numeric vector u of length n: the piecewise-constant minimizer.
+#' @noRd
 cssd_irregular_eigen <- function(y_in, x_in, lambda, max_iter = 100L, rho = 1.0) {
     .Call(`_jumps_cssd_irregular_eigen`, y_in, x_in, lambda, max_iter, rho)
 }
@@ -92,6 +96,7 @@ cssd_potts_predict <- function(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, del
 #' first row must be of zero values;
 #' @returns It does not return anything as it writes on the A1 and A2 matrices
 #' passed as reference.
+#' @noRd
 da <- function(k1, k2, X, A1, A2) {
     invisible(.Call(`_jumps_da`, k1, k2, X, A1, A2))
 }
@@ -132,7 +137,7 @@ da <- function(k1, k2, X, A1, A2) {
 #' arbitrary and will be overwritten;
 #' @param i vector of the n innovations; values are
 #' arbitrary and will be overwritten;
-#' @param f vector of the n innovatoin variances;values are
+#' @param f vector of the n innovation variances; values are
 #' arbitrary and will be overwritten;
 #' @param r1 vector of the n+1 smoothers (Th.5.4 in Pelagatti, 2015)
 #' for the level equation; values are arbitrary and will be overwritten;
@@ -144,15 +149,16 @@ da <- function(k1, k2, X, A1, A2) {
 #' and slope; values are arbitrary and will be overwritten;
 #' @param n22 vector of the n+1 variance smoothers (Th.5.4 in Pelagatti, 2015) for the slope
 #' equation; values are arbitrary and will be overwritten;
-#' @param e vector of the n+1 observation error smoothers (Th.5.4 in Pelagatti, 2015);
+#' @param e vector of the n observation error smoothers (Th.5.4 in Pelagatti, 2015);
 #' values are arbitrary and will be overwritten;
-#' @param d vector of the n+1 observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
+#' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 #' values are arbitrary and will be overwritten;
 #' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
 #' on the estimation of the hp filter (with jumps) at time t;
 #' values are arbitrary and will be overwritten;
 #' @return The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part
 #' that can be added if needed.
+#' @export
 llt <- function(y, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_ = NULL) {
     .Call(`_jumps_llt`, y, var_eps, var_eta, var_zeta, cov_eta_zeta, a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2, n11, n12, n22, e, d, w_)
 }

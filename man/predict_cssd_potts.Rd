@@ -2,25 +2,42 @@
 % Please edit documentation in R/cssd.R
 \name{predict_cssd_potts}
 \alias{predict_cssd_potts}
-\title{Predict from a fitted CSSD on new x locations}
+\title{Predict from a fitted CSSD at new locations}
 \usage{
-predict_cssd_potts(fit, xnew, y_orig, x_orig, delta = 1)
+predict_cssd_potts(fit, xnew, y_orig = NULL, x_orig = NULL, delta = NULL)
 }
 \arguments{
-\item{fit}{object returned by \code{ssj_cssd_potts}.}
+\item{fit}{object returned by \code{\link{ssj_cssd_potts}}.}
 
-\item{xnew}{numeric vector of query locations.}
+\item{xnew}{numeric vector of query locations (it need not be sorted).}
 
-\item{y_orig, x_orig}{original data vectors (needed for re-fitting Hermite
-control points on each segment).}
+\item{y_orig, x_orig}{original data vectors, needed to re-fit the Hermite
+control points on each segment. If \code{NULL} (default), the sorted data
+stored in \code{fit} by \code{\link{ssj_cssd_potts}} are used.}
 
-\item{delta}{positive scalar or vector: noise std devs (same as used to
-fit \code{fit}).}
+\item{delta}{positive scalar or vector with the noise standard deviations
+(the same as those used to obtain \code{fit}). If \code{NULL} (default),
+the value stored in \code{fit} is used.}
 }
 \value{
-Numeric vector of fitted values at \code{xnew}.
+Numeric vector of fitted values, in the same order as \code{xnew}.
 }
 \description{
-Evaluates the piecewise cubic spline returned by \code{\link{ssj_cssd_potts}}
-at arbitrary query points.
+Evaluates the piecewise cubic spline returned by
+\code{\link{ssj_cssd_potts}} at arbitrary query points. Query points outside
+the range of the data are extrapolated by the cubic polynomial of the
+nearest segment.
+}
+\examples{
+set.seed(1)
+x    <- sort(runif(100))
+y    <- sin(4 * pi * x) + c(rep(0, 50), rep(1, 50)) + rnorm(100, sd = 0.1)
+fit  <- ssj_cssd_potts(y, x, p = 0.999, gamma = 4)
+xnew <- seq(0, 1, length.out = 200)
+plot(x, y)
+lines(xnew, predict_cssd_potts(fit, xnew), col = "darkgreen", lwd = 2)
+
+}
+\seealso{
+\code{\link{ssj_cssd_potts}}.
 }

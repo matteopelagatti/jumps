@@ -3,7 +3,7 @@
 \name{auto_ssj_kfs}
 \alias{auto_ssj_kfs}
 \title{Automatic selection of the optimal time-warping smoothing spline with jumps
-using the Kalman filter-smoother}
+using the Kalman filter and smoother}
 \usage{
 auto_ssj_kfs(
   y,
@@ -17,42 +17,48 @@ auto_ssj_kfs(
 )
 }
 \arguments{
-\item{y}{vector with the y (missing values allowed).}
+\item{y}{numeric vector with the response (missing values allowed).}
 
-\item{x}{vector with the x (no missing values allowed).}
+\item{x}{numeric vector with the covariate (no missing values allowed).}
 
-\item{lambda}{smoothing constant (positive scalar).}
+\item{lambda}{positive scalar with the smoothing parameter.}
 
-\item{grid}{numeric vector of maxsum values to search; default is 21 equally
-spaced values from 0 to the x range.}
+\item{grid}{numeric vector of \code{maxsum} values to search; the default is
+21 equally spaced values from 0 to the range of \code{x}.}
 
-\item{ic}{string: information criterion for selection ("bic", "ebic"
-(recommended when jumps are expected to be rare relative to the n-1
-candidate locations -- see \code{ebic_xi}), "hq", "aic", "aicc").}
+\item{ic}{string with the information criterion used for the choice: the
+default is \code{"ebic"} (recommended when jumps are expected to be rare
+relative to the \code{n-1} candidate locations, see \code{ebic_xi}), but
+\code{"bic"}, \code{"hq"}, \code{"aic"} and \code{"aicc"} are also
+available.}
 
-\item{edf}{logical: passed to \code{ssj_kfs} (default TRUE).}
+\item{edf}{logical: passed to \code{\link{ssj_kfs}} (default \code{TRUE}).}
 
-\item{last_delta}{numeric scalar: passed to \code{ssj_kfs} (default 1).}
+\item{last_delta}{numeric scalar: passed to \code{\link{ssj_kfs}}
+(default 1).}
 
-\item{ebic_xi}{numeric scalar in [0,1] passed to \code{ssj_kfs}: strength
-of the Extended-BIC search penalty (default 1; only relevant when
-\code{ic = "ebic"}).}
+\item{ebic_xi}{numeric scalar in \code{[0,1]} passed to
+\code{\link{ssj_kfs}}: strength of the extended-BIC search penalty
+(default 1; only relevant when \code{ic = "ebic"}).}
 }
 \value{
-The output of \code{ssj_kfs} corresponding to the best IC.
+The output of the \code{\link{ssj_kfs}} function corresponding to
+  the best choice according to the selected information criterion.
 }
 \description{
-Runs \code{ssj_kfs} over a grid of \code{maxsum} values and returns the
-solution with the lowest selected information criterion.  Each grid point is
-warm-started from the previous optimum.  The search stops early when the IC
-increases for three consecutive grid values.
+Runs \code{\link{ssj_kfs}} over a grid of \code{maxsum} values and returns
+the solution with the lowest value of the selected information criterion.
+Each grid point is warm-started from the previous optimum, and the search
+stops early when the criterion increases for three consecutive grid values.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)
 of_kfs <- auto_ssj_kfs(y = faithful$waiting,
                        x = faithful$eruptions,
                        lambda = 1)
-lines(x = sort(faithful$eruptions),
-      y = of_kfs$smoothed_level, col = "blue", lwd = 2)
+lines(x = of_kfs$x, y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 
+}
+\seealso{
+\code{\link{ssj_kfs}}.
 }

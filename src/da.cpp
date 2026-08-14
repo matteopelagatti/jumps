@@ -28,6 +28,7 @@ using namespace Rcpp;
 //' first row must be of zero values;
 //' @returns It does not return anything as it writes on the A1 and A2 matrices
 //' passed as reference.
+//' @noRd
 // [[Rcpp::export]]
 void da(NumericVector k1,
        NumericVector k2,

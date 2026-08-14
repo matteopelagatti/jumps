@@ -37,7 +37,7 @@ using namespace Rcpp;
 //' arbitrary and will be overwritten;
 //' @param i vector of the n innovations; values are
 //' arbitrary and will be overwritten;
-//' @param f vector of the n innovatoin variances;values are
+//' @param f vector of the n innovation variances; values are
 //' arbitrary and will be overwritten;
 //' @param r1 vector of the n+1 smoothers (Th.5.4 in Pelagatti, 2015)
 //' for the level equation; values are arbitrary and will be overwritten;
@@ -49,15 +49,16 @@ using namespace Rcpp;
 //' and slope; values are arbitrary and will be overwritten;
 //' @param n22 vector of the n+1 variance smoothers (Th.5.4 in Pelagatti, 2015) for the slope
 //' equation; values are arbitrary and will be overwritten;
-//' @param e vector of the n+1 observation error smoothers (Th.5.4 in Pelagatti, 2015);
+//' @param e vector of the n observation error smoothers (Th.5.4 in Pelagatti, 2015);
 //' values are arbitrary and will be overwritten;
-//' @param d vector of the n+1 observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
+//' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 //' values are arbitrary and will be overwritten;
 //' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
 //' on the estimation of the hp filter (with jumps) at time t;
 //' values are arbitrary and will be overwritten;
 //' @return The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part
 //' that can be added if needed.
+//' @export
 // [[Rcpp::export]]
  double llt(NumericVector y,
             NumericVector var_eps,
@@ -135,7 +136,10 @@ using namespace Rcpp;
    double k;
    double ksq;
    double kk;
-   for (unsigned int t = n-1; t >= 0; --t) {
+   // NB: t is signed on purpose.  With an unsigned index the loop condition
+   // t >= 0 is always true and the loop relies on the `if (t == 0) break;`
+   // below; compilers rightly warn about it.
+   for (int t = (int)n - 1; t >= 0; --t) {
      k = (1 - k1[t]);
      ksq = k*k;
      kk = k2[t]*k;
@@ -209,9 +213,9 @@ using namespace Rcpp;
  //' and slope; values are arbitrary and will be overwritten;
  //' @param n22 vector of the n+1 variance smoothers (Th.5.4 in Pelagatti, 2015) for the slope
  //' equation; values are arbitrary and will be overwritten;
- //' @param e vector of the n+1 observation error smoothers (Th.5.4 in Pelagatti, 2015);
+ //' @param e vector of the n observation error smoothers (Th.5.4 in Pelagatti, 2015);
  //' values are arbitrary and will be overwritten;
- //' @param d vector of the n+1 observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
+ //' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
  //' values are arbitrary and will be overwritten;
  //' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
  //' on the estimation of the hp filter (with jumps) at time t;
@@ -296,7 +300,10 @@ using namespace Rcpp;
    double k;
    double ksq;
    double kk;
-   for (unsigned int t = n-1; t >= 0; --t) {
+   // NB: t is signed on purpose.  With an unsigned index the loop condition
+   // t >= 0 is always true and the loop relies on the `if (t == 0) break;`
+   // below; compilers rightly warn about it.
+   for (int t = (int)n - 1; t >= 0; --t) {
      k = (1 - k1[t]);
      ksq = k*k;
      kk = k2[t]*k;

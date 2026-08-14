@@ -7,46 +7,53 @@
 auto_hpfjx(
   y,
   X,
-  grid = seq(0, sd(y) * 10, sd(y)/10),
+  grid = seq(0, sd(y, na.rm = TRUE) * 10, sd(y, na.rm = TRUE)/10),
   ic = c("bic", "hq", "aic", "aicc"),
   edf = TRUE
 )
 }
 \arguments{
-\item{y}{numeric vector cotaining the time series;}
+\item{y}{numeric vector containing the time series (missing values allowed).}
 
-\item{X}{numeric matrix with regressors in the columns;}
+\item{X}{numeric matrix with the regressors in the columns.}
 
-\item{grid}{numeric vector containing the grid for the argument \code{maxsum}
-of the \code{hpfj} function;}
+\item{grid}{numeric vector containing the grid for the argument
+\code{maxsum} of the \code{\link{hpfjx}} function.}
 
-\item{ic}{string with information criterion for the choice: the default is
-"bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-are available;}
+\item{ic}{string with the information criterion used for the choice: the
+default is \code{"bic"} (simulations show this is the best choice), but
+\code{"hq"}, \code{"aic"} and \code{"aicc"} are also available.}
 
-\item{edf}{logical scalar: TRUE (default) if the number of degrees of freedom
-should be computed as "effective degrees of freedom" (Efron, 1986) as opposed
-to a more traditional way (although not supported by theory) when FALSE.}
+\item{edf}{logical: \code{TRUE} (default) if the number of degrees of freedom
+should be computed as "effective degrees of freedom" (Efron, 1986), as
+opposed to a more traditional way (although not supported by theory) when
+\code{FALSE}.}
 }
 \value{
-The ouput of the \code{hpjf} function corresponding to the best
-choice according to the selected information criterion.
+The output of the \code{\link{hpfjx}} function corresponding to the
+  best choice according to the selected information criterion.
 }
 \description{
-This function needs more testing since it does not seem to work as expected.
-For this reasin the wrapper \code{hpj} at the moment does not allow regressors.
-The regularization constant for the HP filter with jumps is the
-maximal sum of standard deviations for the level disturbance. This value
-has to be passed to the \code{hpfjx} function. The \code{auto_hpfjx} runs
-\code{hpfjx} on a grid of regularization constants and returns the output
-of \code{hpfjx} selected by the chosen information criterion.
+The regularization constant for the HP filter with jumps is the maximal sum
+of standard deviations of the level disturbance. This value has to be passed
+to the \code{\link{hpfjx}} function. \code{auto_hpfjx} runs \code{hpfjx} on a
+grid of regularization constants and returns the output of \code{hpfjx}
+selected by the chosen information criterion.
+}
+\details{
+This function is still experimental and needs more testing, since it does not
+always work as expected. For this reason the wrapper \code{\link{hpj}} does
+not allow regressors at the moment.
 }
 \examples{
 y <- log(AirPassengers)
 n <- length(y)
 mod <- auto_hpfjx(y, trigseas(n, 12))
-hpj <- ts(mod$smoothed_level, start(y), frequency = 12)
+trend <- ts(mod$smoothed_level, start(y), frequency = 12)
 plot(y)
-lines(hpj, col = "red")
+lines(trend, col = "red")
 
+}
+\seealso{
+\code{\link{hpfjx}}, \code{\link{hpfj}}.
 }

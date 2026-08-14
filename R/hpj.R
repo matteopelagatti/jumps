@@ -4,61 +4,79 @@
 
 
 #' Hodrick-Prescott filter with jumps
-#' 
-#' @description
-#' This function is a wrapper for the various Hodrick-Prescott filters with jumps functions.
-#' The end user should use this: it is simpler and more flexible than the other functions.
-#' 
-#' @param y either a numeric vector or a time series object containing the time series to filter;
-#' @param maxsum maximum sum of additional level standard deviations,
-#' if \code{NULL} the value is selected automatically on a grid using the specified information criterion (ic);
-#' @param lambda smoothing constant of the HP filter,
-#' if \code{NULL} the value is estimated by maximum likelihood;
-#' @param xreg matrix of regressors;
-#' @param ic string with information criterion for the automatic choice of \code{maxsum}:
-#' the default is "bic" (simulations show this is the best choice), but also "hq", "aic" and "aicc"
-#' are available.
-#' @param scl scaling factor for the time series (default is 1000): the time series
-#' is rescaled as (y-min(y))/(max(y)-min(y))*scl. This is done since the default
-#' starting values for the optimization seem to work well in this scale);
-#' If `scl` is set equal to the string `"original"` the time series is not rescaled.
-#' 
-#' @returns S3 object of class hpj with the following slots:
+#'
+#' Wrapper for the various Hodrick-Prescott filters with jumps. The end user
+#' should call this function: it is simpler and more flexible than the
+#' lower-level \code{hpfj*} functions.
+#'
+#' @param y either a numeric vector or a time series object (\code{ts},
+#'   \code{zoo}, \code{xts}, \code{timeSeries}) containing the time series to
+#'   filter.
+#' @param maxsum maximum sum of additional level standard deviations; if
+#'   \code{NULL} (default), the value is selected automatically on a grid using
+#'   the information criterion \code{ic}.
+#' @param lambda smoothing constant of the HP filter; if \code{NULL} (default),
+#'   the value is estimated by maximum likelihood.
+#' @param xreg matrix of regressors. Not supported yet: passing a non-\code{NULL}
+#'   value raises an error. Use \code{\link{hpfjx}} for the (still experimental)
+#'   version with regressors.
+#' @param ic string with the information criterion used for the automatic choice
+#'   of \code{maxsum}: the default is \code{"bic"} (simulations show this is the
+#'   best choice), but \code{"hq"}, \code{"aic"} and \code{"aicc"} are also
+#'   available.
+#' @param scl scaling factor for the time series (default 1000): the series is
+#'   rescaled as \code{(y - min(y))/(max(y) - min(y))*scl}, since the default
+#'   starting values of the optimizer work well on this scale. If \code{scl} is
+#'   the string \code{"original"}, the series is not rescaled.
+#'
+#' @returns An S3 object of class \code{hpj} with the following slots:
 #' \itemize{
-#'  \item y: the input time series;
-#'  \item maxsum: the maximum sum of additional standard deviations;
-#'  \item lambda: the smoothing constant of the HP filter;
-#'  \item pars: vector of estimated parameters (sigma_slope, sigma_noise, gamma);
-#'  \item hpj: the time series of the HP filter with jumps;
-#'  \item hpj_std: the time series of the HP filter with jumps standard deviations;
-#'  \item std_devs: vector of additional standard deviations of the level disturbance;
-#'  \item breaks: vector of indices of the breaks;
-#'  \item xreg: matrix of regressors;
-#'  \item df: model's degrees of freedom;
-#'  \item loglik: value of the log-likelihood at maximum;
-#'  \item ic: vector of information criteria (aic, aicc, bic, hq);
-#'  \item opt: the output of the optimization function (nloptr);
-#'  \item call: the call to the function.
+#'  \item \code{y}: the input time series.
+#'  \item \code{maxsum}: the maximum sum of additional standard deviations.
+#'  \item \code{lambda}: the smoothing constant of the HP filter.
+#'  \item \code{pars}: vector of estimated parameters (sigma_slope, sigma_noise,
+#'    gamma).
+#'  \item \code{hpj}: the time series of the HP filter with jumps.
+#'  \item \code{hpj_std}: the time series of the standard deviations of the HP
+#'    filter with jumps.
+#'  \item \code{breaks}: vector of indices of the detected breaks.
+#'  \item \code{sigmas}: vector of additional standard deviations of the level
+#'    disturbance.
+#'  \item \code{xreg}: matrix of regressors (always \code{NULL} in this version).
+#'  \item \code{df}: model's degrees of freedom.
+#'  \item \code{loglik}: value of the log-likelihood at the maximum.
+#'  \item \code{ic}: vector of information criteria (aic, aicc, bic, hq).
+#'  \item \code{opt}: the output of the optimization function (\code{nloptr}).
+#'  \item \code{call}: the call to the function.
 #' }
-#' @examples 
+#'
+#' @seealso \code{\link{hpfj}}, \code{\link{hpfj_fix}}, \code{\link{plot.hpj}},
+#'   \code{\link{print.hpj}}.
+#'
+#' @examples
 #' set.seed(202311)
 #' n <- 100
 #' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
 #' y <- mu + rnorm(n, sd = 20)
 #' hp <- hpj(y, 50)
-#' plot(hp)
+#' print(hp)
+#' plot(hp, use_ggplot = FALSE)
+#'
 #' @export
 hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
                 ic = c("bic", "hq", "aic", "aicc"), scl = 1000) {
-  if (scl == "original") scl <- max(y) - min(y)
-  y_num <- as.numeric(y)
-  y_min <- min(y_num)
-  y_max <- max(y_num)
-  y_rng <- y_max - y_min
-  y_scl <- (y_num - y_min) / y_rng * scl # rescaled y
   if (!is.null(xreg)) {
-    stop("xreg is not supported yet")
+    stop("'xreg' is not supported yet: see hpfjx() for the experimental version")
   }
+  y_num <- as.numeric(y)
+  y_min <- min(y_num, na.rm = TRUE)
+  y_max <- max(y_num, na.rm = TRUE)
+  y_rng <- y_max - y_min
+  if (identical(scl, "original")) scl <- y_rng
+  if (!is.numeric(scl) || length(scl) != 1L || !is.finite(scl) || scl <= 0) {
+    stop("'scl' must be a positive scalar or the string \"original\"")
+  }
+  y_scl <- (y_num - y_min) / y_rng * scl # rescaled y
   if (!is.null(lambda)) {  # lambda is specified
     if (is.null(maxsum)) { # no maxsum is provided
       out <- auto_hpfj_fix(y = y_scl, lambda = lambda, ic = ic)
@@ -72,7 +90,7 @@ hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
       out <- hpfj(y = y_scl, maxsum = maxsum)
     }
   }
-  # antitransform
+  # back-transform to the original scale
   smo <- y
   smo[] <- out$smoothed_level/scl*y_rng + y_min
   smo_std <- y
@@ -82,9 +100,8 @@ hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
   sigmas[1] <- 0
   pars <- out$pars
   pars[1:2] <- pars[1:2]/scl*y_rng
-  # names(pars) <- c("sigma_slope", "sigma_noise", "gamma")
-  if (is.null(maxsum)) maxsum = out$maxsum/scl*y_rng
-  if (is.null(lambda)) lambda = unname(pars[2]/pars[1])^2
+  if (is.null(maxsum)) maxsum <- out$maxsum/scl*y_rng
+  if (is.null(lambda)) lambda <- unname(pars[2]/pars[1])^2
   structure(
     list(
       y = y,
@@ -108,27 +125,48 @@ hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
 
 
 #' Plot method for the class hpj
-#' 
-#' @param x an object of class hpj;
-#' @param prob coverage probability for the confidence interval of the filter;
-#' @param show_breaks logical, if \code{TRUE} vertical lines are drawn at the jumps;
-#' @param main title of the plot;
-#' @param use_ggplot logical, if \code{TRUE} the plot is done with ggplot2;
-#' @param ... additional arguments passed to the plot function (if no ggplot2 is used).
-#' @returns If \code{use_ggplot} is \code{TRUE} a ggplot object is returned, otherwise
-#' a base plot is shown and nothing is returned.
-#' @rdname plot
-#' @exportS3Method base::plot
+#'
+#' Plots the original time series together with the estimated Hodrick-Prescott
+#' filter with jumps, optionally with a confidence band and vertical lines at
+#' the detected breaks.
+#'
+#' @param x an object of class \code{hpj}.
+#' @param prob coverage probability of the confidence interval for the filter;
+#'   if \code{NULL} (default) no interval is drawn.
+#' @param show_breaks logical: if \code{TRUE} (default), vertical lines are
+#'   drawn at the detected breaks.
+#' @param main title of the plot.
+#' @param use_ggplot logical: if \code{TRUE} (default), the plot is produced
+#'   with \pkg{ggplot2}, which must be installed; otherwise base graphics are
+#'   used.
+#' @param ... additional arguments passed to the base \code{plot} function (only
+#'   used when \code{use_ggplot = FALSE}).
+#'
+#' @returns If \code{use_ggplot} is \code{TRUE}, a \pkg{ggplot2} object;
+#'   otherwise a base plot is drawn and \code{NULL} is returned invisibly.
+#'
+#' @examples
+#' set.seed(202311)
+#' n <- 100
+#' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
+#' y <- mu + rnorm(n, sd = 20)
+#' hp <- hpj(y, 50)
+#' plot(hp, prob = 0.95, use_ggplot = FALSE)
+#'
 #' @export
-plot.hpj <- function(x, prob = NULL, show_breaks = TRUE, main = "original + filter",
-                     use_ggplot = TRUE, ...) {
-  if (use_ggplot & ("timeSeries" %in% class(x$y))) {
-    warning("timeSeries objects are not supported for ggplot2")
+plot.hpj <- function(x, prob = NULL, show_breaks = TRUE,
+                     main = "original + filter", use_ggplot = TRUE, ...) {
+  if (use_ggplot && !requireNamespace("ggplot2", quietly = TRUE)) {
+    warning("package 'ggplot2' is not installed: falling back to base graphics")
+    use_ggplot <- FALSE
+  }
+  if (use_ggplot && inherits(x$y, "timeSeries")) {
+    warning("timeSeries objects are not supported by ggplot2: falling back to base graphics")
     use_ggplot <- FALSE
   }
   value <- x$y
   filtered <- x$hpj
-  if (use_ggplot) { # if use_ggplot is TRUE
+  if (use_ggplot) {
     dt <- data.frame(time = time(value),
                      value = as.numeric(value),
                      filtered = as.numeric(filtered))
@@ -137,22 +175,24 @@ plot.hpj <- function(x, prob = NULL, show_breaks = TRUE, main = "original + filt
       ggplot2::geom_line(ggplot2::aes(y = filtered), color = "red") +
       ggplot2::ggtitle(main)
     if (!is.null(prob)) {
+      z <- abs(qnorm((1 - prob)/2))
       gg <- gg +
-        ggplot2::geom_ribbon(ggplot2::aes(ymax = filtered + qnorm((1-prob)/2)*x$hpj_std,
-                        ymin = filtered - qnorm((1-prob)/2)*x$hpj_std),
-                        fill = "red", alpha = 0.1)
+        ggplot2::geom_ribbon(ggplot2::aes(ymax = filtered + z*x$hpj_std,
+                                          ymin = filtered - z*x$hpj_std),
+                             fill = "red", alpha = 0.1)
     }
-    if (show_breaks & length(x$breaks)) {
-      gg <- gg + ggplot2::geom_vline(xintercept = time(value)[x$breaks], linetype = "dashed")
+    if (show_breaks && length(x$breaks)) {
+      gg <- gg + ggplot2::geom_vline(xintercept = time(value)[x$breaks],
+                                     linetype = "dashed")
     }
     return(gg)
   }
-  # if use_ggplot is FALSE
+  # base graphics
   if (is.null(prob)) {
     plot(value, type = "l", main = main, ...)
     lines(filtered, col = "red", ...)
   } else {
-    z <- abs(qnorm((1-prob)/2))
+    z <- abs(qnorm((1 - prob)/2))
     up <- filtered + z*x$hpj_std
     lo <- filtered - z*x$hpj_std
     rng <- range(c(as.numeric(value), as.numeric(up), as.numeric(lo)))
@@ -161,24 +201,35 @@ plot.hpj <- function(x, prob = NULL, show_breaks = TRUE, main = "original + filt
     lines(up, col = "red", lty = 2, ...)
     lines(lo, col = "red", lty = 2, ...)
   }
-  if (show_breaks & length(x$breaks)) {
-    if ("xts" %in% class(value)) {
+  if (show_breaks && length(x$breaks)) {
+    if (inherits(value, "xts") && requireNamespace("xts", quietly = TRUE)) {
       evt <- xts::xts(rep("", length(x$breaks)), time(value)[x$breaks])
       xts::addEventLines(evt, lty = 2)
     } else {
       abline(v = time(value)[x$breaks], lty = 2)
     }
   }
+  invisible(NULL)
 }
 
 
 #' Print method for the class hpj
-#' 
-#' @param x an object of class hpj;
-#' @param ... not used: for consistency with generic function.
-#' @returns No return value, called for side effects
-#' @rdname print
-#' @exportS3Method base::print
+#'
+#' Prints the call, the estimated parameters, the information criteria and the
+#' dates of the detected breaks.
+#'
+#' @param x an object of class \code{hpj}.
+#' @param ... not used: for consistency with the generic function.
+#'
+#' @returns \code{x}, invisibly. Called for its side effect of printing.
+#'
+#' @examples
+#' set.seed(202311)
+#' n <- 100
+#' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
+#' y <- mu + rnorm(n, sd = 20)
+#' print(hpj(y, 50))
+#'
 #' @export
 print.hpj <- function(x, ...) {
   cat("Hodrick-Prescott filter with jumps\n")
@@ -202,21 +253,32 @@ print.hpj <- function(x, ...) {
     cat("  no breaks were detected\n")
   } else {
     M <- as.matrix(as.character(time(x$y)[x$breaks]))
-    rownames(M) <- 1:length(x$breaks)
+    rownames(M) <- seq_along(x$breaks)
     colnames(M) <- ""
     print(M, quote = FALSE)
   }
+  invisible(x)
 }
 
+
 #' logLik method for the class hpj
-#' 
-#' @param object an object of class hpj;
-#' @param ... not used: for consistency with generic function.
-#' @returns An object of logLik class with the log-likelihood value and two
-#' attributes: df, the number of degrees of freedom, and nobs, the number of
-#' observations.
-#' @rdname logLik
-#' @exportS3Method base::logLik
+#'
+#' Extracts the Gaussian log-likelihood of a fitted HP filter with jumps.
+#'
+#' @param object an object of class \code{hpj}.
+#' @param ... not used: for consistency with the generic function.
+#'
+#' @returns An object of class \code{logLik} with the log-likelihood value and
+#'   two attributes: \code{df}, the number of degrees of freedom, and
+#'   \code{nobs}, the number of observations.
+#'
+#' @examples
+#' set.seed(202311)
+#' n <- 100
+#' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
+#' y <- mu + rnorm(n, sd = 20)
+#' logLik(hpj(y, 50))
+#'
 #' @export
 logLik.hpj <- function(object, ...) {
   structure(
@@ -227,35 +289,56 @@ logLik.hpj <- function(object, ...) {
   )
 }
 
+
 #' nobs method for the class hpj
-#' 
-#' @param object an object of class hpj;
-#' @param ... not used: for consistency with generic function.
-#' @returns The number of (non missing) observations of the time series on
-#' which the HP filter with jumps has been applied.
-#' @rdname nobs
-#' @exportS3Method base::nobs
+#'
+#' Extracts the number of non-missing observations used to fit an HP filter
+#' with jumps.
+#'
+#' @param object an object of class \code{hpj}.
+#' @param ... not used: for consistency with the generic function.
+#'
+#' @returns The number of non-missing observations of the time series to which
+#'   the HP filter with jumps has been applied.
+#'
+#' @examples
+#' set.seed(202311)
+#' n <- 100
+#' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
+#' y <- mu + rnorm(n, sd = 20)
+#' nobs(hpj(y, 50))
+#'
 #' @export
 nobs.hpj <- function(object, ...) {
   sum(!is.na(object$y))
 }
 
+
 #' BIC method for the class hpj
-#' 
-#' @param object an object of class hpj;
-#' @param ... additional objects of class hpj.
-#' @returns If just one object is provided,
-#' a numeric value with the corresponding BIC.
-#' If multiple objects are provided, a data.frame with rows corresponding to
-#' the objects and columns representing the number of parameters in the
-#' model (df) and the BIC.
-#' @rdname BIC
-#' @exportS3Method base::BIC
+#'
+#' Extracts the Bayesian information criterion of one or more fitted HP filters
+#' with jumps.
+#'
+#' @param object an object of class \code{hpj}.
+#' @param ... optional additional objects of class \code{hpj}.
+#'
+#' @returns If just one object is provided, a numeric value with the
+#'   corresponding BIC. If multiple objects are provided, a \code{data.frame}
+#'   with rows corresponding to the objects and columns representing the number
+#'   of parameters in the model (\code{df}) and the BIC.
+#'
+#' @examples
+#' set.seed(202311)
+#' n <- 100
+#' mu <- 100*cos(3*pi/n*(1:n)) - ((1:n) > 50)*n - c(rep(0, 50), 1:50)*10
+#' y <- mu + rnorm(n, sd = 20)
+#' BIC(hpj(y, 50), hpj(y, 100))
+#'
 #' @export
 BIC.hpj <- function(object, ...) {
   dots <- list(...)
   if (length(dots) == 0) return(unname(object$ic["bic"]))
-  ndx <- which(sapply(dots, function(x) class(x) == "hpj"))
+  ndx <- which(vapply(dots, inherits, logical(1), what = "hpj"))
   if (length(ndx) == 0) return(unname(object$ic["bic"]))
   df <- data.frame(df = c(object$df, sapply(dots[ndx], function(x) x$df)),
                    BIC = c(object$ic["bic"], sapply(dots[ndx], function(x) x$ic["bic"])))

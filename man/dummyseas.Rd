@@ -7,28 +7,31 @@
 dummyseas(n, s, remove = s)
 }
 \arguments{
-\item{n}{length of time series;}
+\item{n}{length of the time series.}
 
-\item{s}{seasonal period;}
+\item{s}{seasonal period.}
 
-\item{remove}{to avoid collinearity with the constant
-remove a column, by default it is column s; if NULL no
+\item{remove}{index of the column to remove in order to avoid collinearity
+with the constant; by default it is column \code{s}. If \code{NULL}, no
 column is removed.}
 }
 \value{
-It returns a matrix with \eqn{n} rows and \eqn{s-1}
-column unless \code{remove = NULL}.
+A matrix with \eqn{n} rows and \eqn{s-1} columns, unless
+  \code{remove = NULL}, in which case it has \eqn{s} columns.
 }
 \description{
-It produces a matrix with seasonal dummies summing to zero
-to be used as regressors. If \eqn{s} is the seasonal period,
-then the  \eqn{j}-th dummy equals 1 in season \eqn{j} and
-\eqn{-1/(s-1)} in the other seasons, so that the variable
-sums to 0 over one year period.
+Produces a matrix of seasonal dummies summing to zero, to be used as
+regressors. If \eqn{s} is the seasonal period, then the \eqn{j}-th dummy
+equals 1 in season \eqn{j} and \eqn{-1/(s-1)} in the other seasons, so that
+the variable sums to 0 over one year.
 }
 \examples{
 y <- log(AirPassengers)
 X <- dummyseas(length(y), 12)
-X <- cbind(X, t = 1:length(y))
-reg <- lm(y~X)
+X <- cbind(X, t = seq_along(y))
+reg <- lm(y ~ X)
+
+}
+\seealso{
+\code{\link{trigseas}} for the trigonometric alternative.
 }

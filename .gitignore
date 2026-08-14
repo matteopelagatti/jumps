@@ -5,3 +5,10 @@
 inst/doc
 /doc/
 /Meta/
+# compiled objects and shared libraries
+src/*.o
+src/*.so
+src/*.dll
+# R CMD check / build output
+*.Rcheck/
+*.tar.gz

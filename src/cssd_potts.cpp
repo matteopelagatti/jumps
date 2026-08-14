@@ -435,20 +435,31 @@ NumericVector cssd_potts_predict(NumericVector y_in, NumericVector x_in,
     VectorXd out(nq);
     out.setZero();
 
+    // Segment boundaries in x-space.  Every query point must fall into exactly
+    // one segment, including the points that lie strictly between the last
+    // data site of a segment and the first data site of the next one (the gap
+    // that straddles a discontinuity).  We therefore cut the real line at the
+    // midpoints of those gaps: segment s owns [cut[s], cut[s+1]), with
+    // cut[0] = -Inf and cut[n_segs] = +Inf so that extrapolation is handled by
+    // the first and last segments.
+    const double NEG_INF = -std::numeric_limits<double>::infinity();
+    const double POS_INF =  std::numeric_limits<double>::infinity();
+    std::vector<double> cut(n_segs + 1);
+    cut[0]       = NEG_INF;
+    cut[n_segs]  = POS_INF;
+    for (int s = 1; s < n_segs; ++s) {
+        int prev_end = seg_start[s] - 1;
+        cut[s] = (x[prev_end] + x[seg_start[s]]) / 2.0;
+    }
+
     for (int s = 0; s < n_segs; ++s) {
         int l = seg_start[s], r = seg_start[s+1] - 1;
-        double xl = x[l], xr = x[r];
 
         // Query points belonging to this segment
         std::vector<int> qidx;
         for (int k = 0; k < nq; ++k) {
             double xv = xq[k];
-            bool in_seg = (s == 0)            ? xv <= xr :
-                          (s == n_segs - 1)   ? xv >= xl :
-                                                (xv >= xl && xv <= xr);
-            // tie-break at disc locations: assign to right segment
-            if (s > 0 && std::abs(xv - xl) < 1e-12) in_seg = true;
-            if (in_seg) qidx.push_back(k);
+            if (xv >= cut[s] && xv < cut[s+1]) qidx.push_back(k);
         }
         if (qidx.empty()) continue;
 

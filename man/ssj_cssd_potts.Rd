@@ -2,39 +2,46 @@
 % Please edit documentation in R/cssd.R
 \name{ssj_cssd_potts}
 \alias{ssj_cssd_potts}
-\title{Cubic smoothing spline with discontinuities (paper's exact CSSD)}
+\title{Cubic smoothing spline with discontinuities (CSSD)}
 \usage{
 ssj_cssd_potts(y, x = NULL, p = 0.999, gamma = 1, delta = 1)
 }
 \arguments{
-\item{y}{numeric vector of observations (no NAs).}
+\item{y}{numeric vector of observations (no missing values).}
 
-\item{x}{numeric vector of sampling locations (no NAs; sorted internally).}
+\item{x}{numeric vector of sampling locations (no missing values; it is
+sorted internally). If \code{NULL} (default), regular spacing \code{1:n} is
+assumed.}
 
 \item{p}{stiffness parameter in \eqn{(0,1)}: weight of the data-fit term
-relative to the smoothness penalty. Values close to 1 favour data fit;
+relative to the smoothness penalty. Values close to 1 favour the data fit;
 values close to 0 favour smoothness (approaching piecewise-linear
-regression as \eqn{p \to 0}). Use \code{\link{auto_ssj_cssd}} for
-automatic selection via K-fold CV.}
+regression as \eqn{p \to 0}). Use \code{\link{auto_ssj_cssd}} for automatic
+selection by K-fold cross-validation.}
 
 \item{gamma}{jump-count penalty \eqn{\gamma > 0}. Larger values discourage
-discontinuities; \eqn{\gamma = \infty} recovers the classical cubic
+discontinuities; \eqn{\gamma \to \infty} recovers the classical cubic
 smoothing spline. Use \code{\link{auto_ssj_cssd}} for automatic selection.}
 
-\item{delta}{positive scalar or vector of length \code{n}: pointwise noise
-standard deviations \eqn{\delta_i}. Default 1 (all equal).}
+\item{delta}{positive scalar or vector of length \code{n} with the pointwise
+noise standard deviations \eqn{\delta_i}. Default 1 (all equal).}
 }
 \value{
-A list with:
+An object of class \code{ssj} (a list, so that all the slots below
+  remain directly accessible) with a \code{\link[=print.ssj]{print}} and a
+  \code{\link[=plot.ssj]{plot}} method. Its slots are:
 \itemize{
   \item \code{smoothed_level}: fitted cubic spline values at each (sorted)
     data site.
   \item \code{x}: sorted data sites.
-  \item \code{disc_locs}: x-coordinates of detected discontinuities
+  \item \code{y}: the response, sorted (and averaged over ties) to match
+    \code{x}.
+  \item \code{disc_locs}: x-coordinates of the detected discontinuities
     (midpoints between adjacent data sites).
   \item \code{n_disc}: number of detected discontinuities.
-  \item \code{p}, \code{gamma}: parameters used.
-  \item \code{nobs}: number of observations.
+  \item \code{p}, \code{gamma}: the parameters used.
+  \item \code{delta}: the vector of noise standard deviations used.
+  \item \code{nobs}: number of distinct data sites used.
 }
 }
 \description{
@@ -42,17 +49,28 @@ Computes the global minimiser of the weak-rod model
 \deqn{\min_{f,J} p\sum_i\!\left(\frac{y_i-f(x_i)}{\delta_i}\right)^{\!2}
   + (1-p)\int(f''(t))^2\,dt + \gamma|J|}
 using dynamic programming with incremental QR updates (Givens rotations),
-exactly as described in Storath & Weinmann (2024).
+exactly as described in Storath and Weinmann (2024).
+}
+\details{
+The algorithm computes the energy of every candidate interval, so both its
+running time and its memory footprint grow as \eqn{O(n^2)}. Sample sizes of
+a few thousand observations are the practical limit.
 }
 \examples{
+set.seed(1)
 x   <- sort(runif(100))
 y   <- sin(4 * pi * x) + c(rep(0, 50), rep(1, 50)) + rnorm(100, sd = 0.1)
 fit <- ssj_cssd_potts(y, x, p = 0.999, gamma = 4)
-plot(x, y); lines(fit$x, fit$smoothed_level, col = "darkgreen", lwd = 2)
+plot(x, y)
+lines(fit$x, fit$smoothed_level, col = "darkgreen", lwd = 2)
 
 }
 \references{
 Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
 signals. \emph{Journal of Computational and Graphical Statistics},
 \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
+}
+\seealso{
+\code{\link{auto_ssj_cssd}}, \code{\link{predict_cssd_potts}},
+  \code{\link{ssj_cssd}}.
 }
