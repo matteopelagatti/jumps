@@ -6,6 +6,14 @@
 #' site is estimated by constrained maximum likelihood, using the Kalman filter
 #' and smoother on the state-space form of the cubic smoothing spline.
 #'
+#'
+#' Tied values of \code{x} are collapsed to their weighted mean before fitting,
+#' and the fitted values are returned at the vector of unique, sorted \code{x}
+#' available in the \code{x} slot of the output. This keeps the problem well
+#' posed: with ties the interval between two replicates has zero length, and a
+#' warp placed there would be a discontinuity between two observations recorded
+#' at the same \code{x}, which is not identified. The replicate counts become
+#' observation weights automatically, so no information is lost.
 #' @param y numeric vector with the response (missing values allowed).
 #' @param x numeric vector with the covariate (no missing values allowed).
 #' @param lambda numeric scalar with the smoothing parameter.
@@ -13,6 +21,14 @@
 #'   this parameterises the jumps through the disturbance variances, so, unlike
 #'   the budget of \code{\link{ssj_mle}}, \code{\link{ssj_kfs}} and
 #'   \code{\link{ssj_atw}}, it is \emph{not} expressed in the units of \code{x}.
+#' @param weights optional numeric vector of positive observation weights, one
+#'   per element of \code{y}. The observation variance becomes
+#'   \eqn{H_t = \lambda\sigma^2/w_t}, so a point carrying weight \eqn{w_t} is
+#'   treated as the mean of \eqn{w_t} independent observations. This is what
+#'   makes it correct to collapse tied values of \code{x} to their mean and
+#'   pass the number of replicates as the weight: the Gaussian likelihood
+#'   factorises, so the weighted fit on the collapsed data is identical to the
+#'   fit on the raw replicates. The default, \code{NULL}, means unit weights.
 #' @param edf logical: if \code{TRUE} (default) the effective degrees of freedom
 #'   are computed, otherwise the number of degrees of freedom is computed in the
 #'   LASSO-regression way.
@@ -56,15 +72,26 @@
 #'
 #' @export
 ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
-                    edf = TRUE, parinit = NULL, last_delta = 1) {
+                    weights = NULL, edf = TRUE, parinit = NULL, last_delta = 1) {
+  wt <- ssj_check_weights(weights, length(y))
+  y  <- as.numeric(y); x <- as.numeric(x)
+  ord  <- order(x)
+  x    <- x[ord]
+  y    <- y[ord]
+  wt   <- wt[ord]
+  # Tied values of x are collapsed to their weighted mean.  Doing it here rather
+  # than leaving it to the caller keeps the problem well posed: with ties the
+  # intervals between replicates have zero length, and a warp placed on one of
+  # them is a discontinuity between two observations recorded at the same x,
+  # which is not identified.
+  cl_  <- ssj_collapse_ties(y, x, wt)
+  y    <- cl_$y; x <- cl_$x; wt <- cl_$wt
   n <- length(y)
-  n1 <- n+1
+  n1 <- n + 1
   nobs <- sum(!is.na(y))
-  vy <- var(y, na.rm = TRUE)
-  sdy <- sqrt(vy)
-  ord <- order(x)
-  x <- x[ord]
-  y <- y[ord]
+  vy   <- var(y, na.rm = TRUE)
+  sdy  <- sqrt(vy)
+  wf   <- c(wt, 1)   # padded: e and d carry a trailing unused element
   # NB: computed AFTER sorting.  var(diff(y)) is not invariant to the order in
   # which the observations are supplied, and it scales the diffuse prior on the
   # slope (p22 below), so taking it on the unsorted y would make the fit depend
@@ -107,7 +134,7 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
     sig2  <- pars[1]*pars[1] # common variance
     sig2t <- pars[vt_eta_ndx]*pars[vt_eta_ndx] # additional variances
     sum_sig2t <- sig2 + sig2t # common variance + additional variances
-    var_eps[]  <- lambda*sig2 # variance of the noise
+    var_eps[]  <- lambda*sig2/wt # variance of the noise, scaled by the weights
     var_eta[]  <- D[1, 1, ]*sum_sig2t # variance of eta
     var_zeta[] <- D[2, 2, ]*sum_sig2t # variance of zeta
     cov_eta_zeta[] <- D[1, 2, ]*sum_sig2t # covariance of eta and zeta
@@ -134,7 +161,7 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
       # Average gradient
       gradient  = c(
         # w.r.t sigma_zeta
-        -pars[1]*sum(rn_sum) - pars[1]*lambda*sum(e*e-d),
+        -pars[1]*sum(rn_sum) - pars[1]*lambda*sum((e*e-d)/wf),
         # w.r.t. sigma_eta_t
         -pars[vt_eta_ndx]*rn_sum
       )/nobs
@@ -152,29 +179,66 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
   
   ##### Optimization step
   ## Starting values
-  if (is.null(parinit)) {
-    inits <- c(sd_zeta = sdy/10, rep(1, n-1), 0) #
-  } else {
-    inits <- parinit
-  }
-  ## Check on starting values
-  # lb <- c(0.0000000001, rep(0, n))
+  ssj_check_parinit(parinit, n + 1L, "(sigma, sigma_1, ..., sigma_n)",
+                    n, cl_$collapsed)
   quasizero <- sdy*1.0e-9
   lb <- c(quasizero, rep(0, n)) # lower bound
-  inits[inits < lb] <- lb[inits < lb]      # make init coherent with lower bound
+
+  ## With every additional standard deviation at zero, sigma is a pure scale:
+  ## multiplying sigma^2 by c multiplies the observation and state variances,
+  ## hence every innovation variance f_t, by c.  The profile log-likelihood in
+  ## c is then -(1/2) sum(log(c f_t) + i_t^2/(c f_t)), maximised at
+  ## c = mean(i_t^2/f_t) evaluated once at sigma = 1, so a single filter pass
+  ## starts the optimizer essentially at the answer.
+  ##
+  ## The previous start (sigma = sdy/10, additional standard deviations at 1)
+  ## was arbitrary on both counts: it could sit orders of magnitude from the
+  ## optimum, and the additional standard deviations began at a point that
+  ## violates the budget constraint whenever maxsum < n-1.  The optimizer then
+  ## stopped at log-likelihoods millions of units below the attainable
+  ## optimum, leaving the fitted curve roughly right but every information
+  ## criterion meaningless.  Same defect, and same remedy, as ssj_kfs().
+  profile_sigma <- function() {
+    var_eps[]      <- lambda/wt          # sigma = 1, additional sd's at 0
+    var_eta[]      <- D[1, 1, ]
+    var_zeta[]     <- D[2, 2, ]
+    cov_eta_zeta[] <- D[1, 2, ]
+    llt_delta(y, delta, var_eps, var_eta, var_zeta, cov_eta_zeta,
+              a1, a2, p11, p12, p22, k1, k2, i, f, r1, r2,
+              n11, n12, n22, e, d)
+    ok <- is.finite(f) & f > 0 & is.finite(i)
+    if (!any(ok)) return(sdy/10)
+    max(sqrt(mean(i[ok]*i[ok]/f[ok])), quasizero)
+  }
+
+  run_nloptr <- function(x0) {
+    nloptr::nloptr(x0 = x0,
+                   eval_f = obj,
+                   lb = lb,
+                   eval_g_ineq = g, # constraint
+                   opts = list(algorithm = "NLOPT_LD_CCSAQ",
+                               xtol_rel = 1.0e-5,
+                               check_derivatives = FALSE,
+                               maxeval = 2000),
+                   wgt = FALSE # passed on to obj() and g() through ...
+    )
+  }
 
   ## Optimization with CCSA ("conservative convex separable approximation")
   # see https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
-  opt <- nloptr::nloptr(x0 = inits,
-                        eval_f = obj,
-                        lb = lb,
-                        eval_g_ineq = g, # constraint
-                        opts = list(algorithm = "NLOPT_LD_CCSAQ",
-                                    xtol_rel = 1.0e-5,
-                                    check_derivatives = FALSE,
-                                    maxeval = 2000),
-                        wgt = FALSE # passed on to obj() and g() through ...
-  )
+  if (is.null(parinit)) {
+    s0 <- profile_sigma()
+    starts <- lapply(s0 * c(1, 0.1, 10),
+                     function(s) pmax(c(s, rep(0, n)), lb))
+    attempts <- lapply(starts, run_nloptr)
+    opt <- attempts[[which.min(vapply(attempts,
+             function(a) if (is.finite(a$objective)) a$objective else Inf,
+             numeric(1)))]]
+  } else {
+    inits <- parinit
+    inits[inits < lb] <- lb[inits < lb]  # make init coherent with lower bound
+    opt <- run_nloptr(inits)
+  }
   if (edf == TRUE) {
     obj(opt$solution, TRUE) # update pointed variables using estimated values
     df <- sum(w)
@@ -198,6 +262,7 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
               bic  = df*log(n) - 2*loglik,
               hq   = 2*(log(log(n))*df - loglik)),
        smoothed_level = (a1 + p11*r1 + p12*r2)[-(n+1)],
+       smoothed_slope = (a2 + p12*r1 + p22*r2)[-(n+1)],
        var_smoothed_level = (p11 - p11*p11*n11 - 2*p11*p12*n12 - p12*p12*n22)[-(n+1)],
        x = x
   )
@@ -221,6 +286,8 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' @param ic string with the information criterion used for the choice: the
 #'   default is \code{"bic"} (simulations show this is the best choice), but
 #'   \code{"hq"}, \code{"aic"} and \code{"aicc"} are also available.
+#' @param weights optional numeric vector of positive observation weights,
+#'   passed to the fitter; see its help page.
 #' @param edf logical: \code{TRUE} (default) if the number of degrees of freedom
 #'   should be computed as "effective degrees of freedom" (Efron, 1986), as
 #'   opposed to a more traditional way (although not supported by theory) when
@@ -244,7 +311,7 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #' lines(x = of_jum$x, y = of_jum$smoothed_level, col = "red", lwd = 2)
 #'
 #' @export
-auto_ssj_fix <- function(y, x, lambda,
+auto_ssj_fix <- function(y, x, lambda, weights = NULL,
                          grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x))*10,
                                     sd(y, na.rm = TRUE)/mean(diff(x))/10),
                          ic = c("bic", "hq", "aic", "aicc"),
@@ -252,7 +319,7 @@ auto_ssj_fix <- function(y, x, lambda,
   ic <- match.arg(ic)
   last_ic <- Inf
   for (M in grid) {
-    out <- ssj_fix(y = y, x = x, lambda = lambda,
+    out <- ssj_fix(y = y, x = x, lambda = lambda, weights = weights,
                    maxsum = M, edf = edf, last_delta = last_delta)
     current_ic <- switch (ic,
                           bic = out$ic["bic"],

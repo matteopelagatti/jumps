@@ -87,6 +87,10 @@ void project_simplex_inplace(const VectorXd& v, double budget,
 //'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
 //'     locations on top of the usual bic (see ebic_xi).}
 //' }
+//' @param w_in numeric vector of n positive observation weights.  The data
+//'   term becomes sum_i w_i (y_i - f_i)^2, so a point with weight w_i counts as
+//'   the mean of w_i independent observations.  Pass a vector of ones for the
+//'   unweighted problem.
 //' @noRd
 // [[Rcpp::export]]
 List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
@@ -94,11 +98,18 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
                             int max_iter = 100, double tol = 1e-4,
                             double learning_rate = 0.1,
                             NumericVector gamma_init = NumericVector(0),
-                            double ebic_xi = 1.0) {
+                            double ebic_xi = 1.0,
+                            NumericVector w_in = NumericVector(0)) {
 
   Map<VectorXd> x(as<Map<VectorXd> >(x_in));
   Map<VectorXd> y(as<Map<VectorXd> >(y_in));
   int n = x.size();
+
+  // Observation weights: default to 1 when not supplied.
+  VectorXd w(n);
+  if (w_in.size() == n) { for (int i = 0; i < n; ++i) w[i] = w_in[i]; }
+  else                    w.setOnes();
+  const double wsum = w.sum();
 
   VectorXd delta_x(n - 1);
   for (int i = 0; i < n - 1; ++i) delta_x[i] = x[i+1] - x[i];
@@ -106,7 +117,7 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
   VectorXd f_curr = y;
   VectorXd df_curr = VectorXd::Zero(n);
   VectorXd rhs = VectorXd::Zero(2*n);
-  for (int i = 0; i < n; ++i) rhs(2*i) = y(i);
+  for (int i = 0; i < n; ++i) rhs(2*i) = w(i) * y(i);
 
   std::vector<Matrix2d> D_blocks(n);
   std::vector<Matrix2d> U_blocks(n - 1);
@@ -141,7 +152,7 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
   for (int iter = 0; iter < max_iter; ++iter) {
 
     // 1. Build matrices
-    for (int i = 0; i < n; ++i) D_blocks[i] << 1.0, 0.0, 0.0, 0.0;
+    for (int i = 0; i < n; ++i) D_blocks[i] << w(i), 0.0, 0.0, 0.0;
 
     for (int i = 0; i < n - 1; ++i) {
       double tau = delta_x[i] + gamma[i];
@@ -216,33 +227,35 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
 
   // --- 5. Takahashi selected inversion for EDF ---
   Matrix2d Sigma_next = D_tilde_inv[n-1];
-  edf_final = Sigma_next(0,0);
+  edf_final = w(n-1) * Sigma_next(0,0);
 
   for (int i = n - 2; i >= 0; --i) {
     Matrix2d P = D_tilde_inv[i] * U_blocks[i];
     Matrix2d Sigma_curr = D_tilde_inv[i] + P * Sigma_next * P.transpose();
-    edf_final += Sigma_curr(0,0);
+    edf_final += w(i) * Sigma_curr(0,0);   // trace(A^-1 S_w)
     Sigma_next = Sigma_curr;
   }
 
   // --- 6. Statistical criteria ---
-  double rss = (y - f_curr).squaredNorm();
-  double mse = rss / n;
+  // Weighted residual sum of squares.  With unit weights wsum == n and every
+  // formula below reduces exactly to the unweighted one.
+  double rss = (w.array() * (y - f_curr).array().square()).sum();
+  double mse = rss / wsum;
 
-  double gcv = mse / std::pow(1.0 - edf_final / n, 2);
+  double gcv = mse / std::pow(1.0 - edf_final / wsum, 2);
 
   // Log-likelihood at sigma^2 = rss/(n - edf): does not collapse to +Inf
   // for near-perfect fits the way the concentrated (sigma^2 = rss/n) form does.
-  double df_resid   = n - edf_final;
+  double df_resid   = wsum - edf_final;
   double sigma2_hat = (df_resid > 0) ? rss / df_resid : mse;
-  double log_lik    = -0.5 * n * std::log(2 * M_PI)
-                    - 0.5 * n * std::log(sigma2_hat)
+  double log_lik    = -0.5 * wsum * std::log(2 * M_PI)
+                    - 0.5 * wsum * std::log(sigma2_hat)
                     - 0.5 * rss / sigma2_hat;
 
-  double aic  = n * std::log(mse) + 2 * edf_final;
-  double aicc = aic + (2 * edf_final * (edf_final + 1)) / (n - edf_final - 1);
-  double bic  = n * std::log(mse) + std::log((double)n) * edf_final;
-  double hq   = n * std::log(mse) + 2 * std::log(std::log((double)n)) * edf_final;
+  double aic  = wsum * std::log(mse) + 2 * edf_final;
+  double aicc = aic + (2 * edf_final * (edf_final + 1)) / (wsum - edf_final - 1);
+  double bic  = wsum * std::log(mse) + std::log(wsum) * edf_final;
+  double hq   = wsum * std::log(mse) + 2 * std::log(std::log(wsum)) * edf_final;
 
   // Extended BIC (Chen and Chen, 2008): bic plus 2*xi*k*log(p), where k is the
   // number of active jump locations and p = n-1 the number of candidates.

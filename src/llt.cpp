@@ -53,9 +53,12 @@ using namespace Rcpp;
 //' values are arbitrary and will be overwritten;
 //' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 //' values are arbitrary and will be overwritten;
-//' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
-//' on the estimation of the hp filter (with jumps) at time t;
-//' values are arbitrary and will be overwritten;
+//' @param w_ NULL (default) or vector of n weights, where element t is the
+//' weight of observation y_t on the smoothed signal at time t, that is the
+//' t-th diagonal element of the smoothing (hat) matrix, computed with the
+//' recursion of Koopman and Harvey (2003); their sum is the effective degrees
+//' of freedom. A missing y_t receives weight zero. Values are arbitrary on
+//' entry and will be overwritten;
 //' @return The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part
 //' that can be added if needed.
 //' @export
@@ -86,11 +89,20 @@ using namespace Rcpp;
    NumericVector w;
    if (w_.isNotNull()) w = w_;
    // Kalman filter (only from t|t-1 to t+1|t)
-   i[0] = y[0] - a1[0];
-   f[0] = p11[0] + var_eps[0];
-   double loglik = log(f[0]) + i[0]*i[0]/f[0];
-   k1[0] = (p11[0] + p12[0]) / f[0];
-   k2[0] = p12[0] / f[0];
+   // A missing FIRST observation needs the same treatment the loop gives to
+   // every later one: no innovation, infinite innovation variance, zero gain
+   // and no contribution to the likelihood.  Without this the initialisation
+   // propagates NA through the whole filter.
+   double loglik = 0.0;
+   if (NumericVector::is_na(y[0])) {
+     i[0] = 0; f[0] = R_PosInf; k1[0] = 0; k2[0] = 0;
+   } else {
+     i[0] = y[0] - a1[0];
+     f[0] = p11[0] + var_eps[0];
+     loglik = log(f[0]) + i[0]*i[0]/f[0];
+     k1[0] = (p11[0] + p12[0]) / f[0];
+     k2[0] = p12[0] / f[0];
+   }
    for (unsigned int t = 0; t < n; ++t) {
      // one-step-prediction
      a1[t+1] = a1[t] + a2[t] + k1[t]*i[t];
@@ -149,9 +161,17 @@ using namespace Rcpp;
      n12[t] = k*(n11[t+1] + n12[t+1]) - k2[t]*(n12[t+1] + n22[t+1]);
      n22[t] = n11[t+1] + 2*n12[t+1] + n22[t+1];
      if (w_.isNotNull()) {
-       w[t] = p11[t]*(1/f[t] + k1[t]*k1[t]*n11[t] + 2*k1[t]*k2[t]*n12[t] +
-         k2[t]*k2[t]*n22[t] - k1[t]*n11[t] - k2[t]*n12[t]) -
-         p12[t]*(k1[t]*(n11[t] + n12[t]) + k2[t]*(n12[t] + n22[t]));
+       // Weight of y_t on the smoothed signal at t, i.e. the diagonal of the
+       // hat matrix.  Koopman and Harvey (2003, JEDC 27, 1317-1333), eqs
+       // (14)-(15) with j = t: w_t(a_t|T) = P_{t|t-1} C_t, where
+       // C_t = Z'D_t - T'N_t K_t and D_t = F_t^{-1} + K_t'N_t K_t.
+       // NB the index on N: here n11[s] stores the paper's N_{s-1} (same
+       // convention as var_smoothed_level and as d[s-1] below), so C_t needs
+       // n11[t+1], not n11[t].  Those values are still the previous
+       // iteration's, which is exactly what is wanted.
+       w[t] = p11[t]*(1/f[t] + k1[t]*k1[t]*n11[t+1] + 2*k1[t]*k2[t]*n12[t+1] +
+         k2[t]*k2[t]*n22[t+1] - k1[t]*n11[t+1] - k2[t]*n12[t+1]) -
+         p12[t]*(k1[t]*(n11[t+1] + n12[t+1]) + k2[t]*(n12[t+1] + n22[t+1]));
      }
      if (t == 0) break;
      e[t-1] = i[t-1]/f[t-1] - k1[t-1]*r1[t] - k2[t-1]*r2[t];
@@ -217,9 +237,12 @@ using namespace Rcpp;
  //' values are arbitrary and will be overwritten;
  //' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
  //' values are arbitrary and will be overwritten;
- //' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
- //' on the estimation of the hp filter (with jumps) at time t;
- //' values are arbitrary and will be overwritten;
+ //' @param w_ NULL (default) or vector of n weights, where element t is the
+ //' weight of observation y_t on the smoothed signal at time t, that is the
+ //' t-th diagonal element of the smoothing (hat) matrix, computed with the
+ //' recursion of Koopman and Harvey (2003); their sum is the effective degrees
+ //' of freedom. A missing y_t receives weight zero. Values are arbitrary on
+ //' entry and will be overwritten;
  //' @return The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part
  //' that can be added if needed.
  // [[Rcpp::export]]
@@ -250,11 +273,20 @@ using namespace Rcpp;
    NumericVector w;
    if (w_.isNotNull()) w = w_;
    // Kalman filter (only from t|t-1 to t+1|t)
-   i[0] = y[0] - a1[0];
-   f[0] = p11[0] + var_eps[0];
-   double loglik = log(f[0]) + i[0]*i[0]/f[0];
-   k1[0] = (p11[0] + delta[0]*p12[0]) / f[0];
-   k2[0] = p12[0] / f[0];
+   // A missing FIRST observation needs the same treatment the loop gives to
+   // every later one: no innovation, infinite innovation variance, zero gain
+   // and no contribution to the likelihood.  Without this the initialisation
+   // propagates NA through the whole filter.
+   double loglik = 0.0;
+   if (NumericVector::is_na(y[0])) {
+     i[0] = 0; f[0] = R_PosInf; k1[0] = 0; k2[0] = 0;
+   } else {
+     i[0] = y[0] - a1[0];
+     f[0] = p11[0] + var_eps[0];
+     loglik = log(f[0]) + i[0]*i[0]/f[0];
+     k1[0] = (p11[0] + delta[0]*p12[0]) / f[0];
+     k2[0] = p12[0] / f[0];
+   }
    for (unsigned int t = 0; t < n; ++t) {
      // one-step-prediction
      a1[t+1] = a1[t] + delta[t]*a2[t] + k1[t]*i[t];
@@ -313,9 +345,19 @@ using namespace Rcpp;
      n12[t] = k*delta[t]*n11[t+1] - k2[t]*delta[t]*n12[t+1] + k*n12[t+1] - k2[t]*n22[t+1];
      n22[t] = delta[t]*delta[t]*n11[t+1] + 2*delta[t]*n12[t+1] + n22[t+1];
      if (w_.isNotNull()) {
-       w[t] = p11[t]*(1/f[t] + k1[t]*k1[t]*n11[t] + 2*k1[t]*k2[t]*n12[t] +
-         k2[t]*k2[t]*n22[t] - k1[t]*n11[t] - k2[t]*n12[t]) -
-         p12[t]*(delta[t]*k1[t]*n11[t] + k1[t]*n12[t] + delta[t]*k2[t]*n12[t] + k2[t]*n22[t]);
+       // Weight of y_t on the smoothed signal at t, i.e. the diagonal of the
+       // hat matrix.  Koopman and Harvey (2003, JEDC 27, 1317-1333), eqs
+       // (14)-(15) with j = t: w_t(a_t|T) = P_{t|t-1} C_t, where
+       // C_t = Z'D_t - T'N_t K_t and D_t = F_t^{-1} + K_t'N_t K_t, here with
+       // T_t = [[1, delta_t], [0, 1]].
+       // NB the index on N: here n11[s] stores the paper's N_{s-1} (same
+       // convention as var_smoothed_level and as d[s-1] below), so C_t needs
+       // n11[t+1], not n11[t].  Those values are still the previous
+       // iteration's, which is exactly what is wanted.
+       w[t] = p11[t]*(1/f[t] + k1[t]*k1[t]*n11[t+1] + 2*k1[t]*k2[t]*n12[t+1] +
+         k2[t]*k2[t]*n22[t+1] - k1[t]*n11[t+1] - k2[t]*n12[t+1]) -
+         p12[t]*(delta[t]*k1[t]*n11[t+1] + k1[t]*n12[t+1] +
+                 delta[t]*k2[t]*n12[t+1] + k2[t]*n22[t+1]);
      }
      if (t == 0) break;
      e[t-1] = i[t-1]/f[t-1] - k1[t-1]*r1[t] - k2[t-1]*r2[t];

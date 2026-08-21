@@ -18,8 +18,8 @@
 #'     and \code{\link{ssj_fix}}, together with their \code{auto_*} wrappers.
 #'   \item \strong{Cubic smoothing splines with discontinuities (CSSD).} An
 #'     implementation of the dynamic-programming algorithm of Storath and
-#'     Weinmann (2024): \code{\link{ssj_cssd_potts}},
-#'     \code{\link{auto_ssj_cssd}} and \code{\link{predict_cssd_potts}}, plus
+#'     Weinmann (2024): \code{\link{ssj_cssd_dp}},
+#'     \code{\link{auto_ssj_cssd}} and \code{\link{predict_cssd_dp}}, plus
 #'     the faster piecewise-constant approximation \code{\link{ssj_cssd}}.
 #' }
 #'
@@ -43,3 +43,9 @@
 #' @importFrom graphics abline lines mtext par points polygon
 #' @importFrom grDevices adjustcolor
 "_PACKAGE"
+
+# The ggplot2 branch of plot.ssj() refers to columns through the .data pronoun,
+# which the tidy-evaluation data mask supplies at draw time.  R CMD check has no
+# way of knowing that, so declare it here rather than take a NOTE.  Declaring
+# the pronoun is enough: the column names themselves are reached through it.
+utils::globalVariables(".data")

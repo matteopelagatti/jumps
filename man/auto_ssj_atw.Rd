@@ -9,12 +9,13 @@ auto_ssj_atw(
   y,
   x,
   lambda,
+  weights = NULL,
   grid = seq(0, max(x) - min(x), length.out = 21L),
   ic = c("ebic", "bic", "hq", "aic", "aicc"),
   max_iter = 100,
   tol = 1e-04,
   learning_rate = 0.1,
-  ebic_xi = 0.3
+  ebic_xi = 0.25
 )
 }
 \arguments{
@@ -23,6 +24,9 @@ auto_ssj_atw(
 \item{x}{numeric vector with the covariate (no missing values allowed).}
 
 \item{lambda}{numeric scalar with the smoothing parameter.}
+
+\item{weights}{optional numeric vector of positive observation weights,
+passed to \code{\link{ssj_atw}}; see its help page.}
 
 \item{grid}{numeric vector of \code{maxsum} values (in the units of \code{x})
 to search; the default is 21 equally spaced values from 0 to the range of
@@ -44,9 +48,10 @@ available.}
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]} passed to
 \code{\link{ssj_atw}}: strength of the extended-BIC search penalty
-(default 0.3; only relevant when \code{ic = "ebic"}). See
-\code{\link{ssj_atw}} for why this default differs from the one used by
-the likelihood-based estimators.}
+(default 0.25; only relevant when \code{ic = "ebic"}). See the
+"Choosing ebic_xi" section of \code{\link{ssj_atw}} for how it was
+calibrated, why it differs from the likelihood-based estimators, and for
+the rule that adapts it to the sample size.}
 }
 \value{
 The output of the \code{\link{ssj_atw}} function corresponding to

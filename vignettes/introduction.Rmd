@@ -133,7 +133,15 @@ through the Kalman filter; `ssj_kfs()` does the same with $\lambda$ held fixed;
 $O(n \log n)$ per iteration; and `ssj_fix()` implements the earlier variant in
 which the additional disturbance variances, rather than the spacings, are the
 free parameters. The `auto_*` wrappers select the budget $M$ over a grid by
-information criteria, EBIC by default.
+information criteria, EBIC by default. Two further wrappers,
+`auto_ssj_atw_gcv()` and `auto_ssj_atw_cv()`, also choose $\lambda$, so that
+the alternating algorithm does not need a pilot fit from `ssj_mle()`.
+
+The strength of the EBIC search penalty, `ebic_xi`, has a calibrated default
+that differs by estimator -- 0.3, 0.15 and 0.25 for `ssj_mle()`, `ssj_kfs()`
+and `ssj_atw()`. They differ because the three are different procedures, not
+because they fit different models; see the "Choosing `ebic_xi`" section of each
+help page.
 
 ## A simulated example
 
@@ -154,37 +162,71 @@ x <- sort(runif(n))
 y <- g1(x) + rnorm(n, sd = 0.05)
 ```
 
-We follow the two-step strategy of the paper's simulation study: a preliminary
-`auto_ssj_mle()` fit supplies the smoothing parameter $\lambda$ by maximum
-likelihood, and the fast alternating algorithm then uses it while EBIC selects
-the warping budget. Note the two different values of `ebic_xi`: the likelihood
-based estimators and the alternating algorithm compute the log-likelihood
-differently, so the search penalty that delivers comparable sparsity is not the
-same. Each function's default reflects that, and here we only override it for
-the pilot.
+Two of the estimators are shown here, because they are the two a user would
+actually choose between, and they reach the same answer by different routes.
+`auto_ssj_mle()` estimates $(\sigma, \lambda)$ by maximum likelihood through
+the Kalman filter and lets EBIC pick the warping budget; `auto_ssj_atw_cv()`
+runs the fast alternating algorithm, taking $\lambda$ from a cross-validation
+of its own and again leaving the budget to EBIC. The second is self-contained:
+unlike the two-step recipe used in the paper's simulation study it needs no
+pilot fit from the likelihood-based estimator. The `ebic_xi` defaults are
+calibrated and differ by estimator; `?ssj_atw` explains why, and nothing needs
+overriding here.
 
 ```{r}
-lambda_pilot <- auto_ssj_mle(y = y, x = x, ic = "ebic", ebic_xi = 0.1)$pars[["lambda"]]
-
-fit_sim <- auto_ssj_atw(y = y, x = x, lambda = lambda_pilot, ic = "ebic")
-fit_sim
+fit_mle <- auto_ssj_mle(y = y, x = x, ic = "ebic")
+fit_mle
 ```
 
-The three discontinuities are recovered at
-`r paste(round(ssj_breaks(fit_sim)$x, 3), collapse = ", ")`, against true
-locations `r paste(true_disc, collapse = ", ")`, and the estimated jump sizes in
-the table above are close to the true $+0.3$, $-0.4$ and $-0.6$. Recall that a
-break is dated at the first observation belonging to the new regime, so the
-reported location is the first sampled point after the discontinuity rather than
-the discontinuity itself.
+```{r}
+fit_atw <- auto_ssj_atw_cv(y = y, x = x, ic = "ebic")
+fit_atw
+```
+
+The two smoothing constants agree closely, which is what makes the
+cross-validated route a usable replacement for the pilot:
+
+```{r}
+c(lambda_mle = fit_mle$pars[["lambda"]],
+  lambda_cv  = fit_atw$pars[["lambda"]])
+```
+
+Both find all three discontinuities: SSJ-MLE at
+`r paste(round(ssj_breaks(fit_mle)$x, 3), collapse = ", ")` and SSJ-ATW-CV at
+`r paste(round(ssj_breaks(fit_atw)$x, 3), collapse = ", ")`, against true
+locations `r paste(true_disc, collapse = ", ")`. Recall that a break is dated at
+the first observation belonging to the new regime, so the reported location is
+the first sampled point after the discontinuity rather than the discontinuity
+itself.
+
+There are more declarations than discontinuities, and it is worth seeing why.
+The warping budget is spread over the two intervals either side of a transition
+rather than concentrated on one, so a single jump can clear the declaration
+threshold twice at adjacent locations; the two reported sizes then add up to
+roughly the true one. This is a property of the reporting rule, which treats
+each interval separately, not of the fit -- the curve itself is unaffected, and
+`ssj_breaks()` accepts stricter `frac_total` and `frac_delta` if you would
+rather see one declaration per transition. Judge the fit by the curve and the
+warp profile; treat the table as a guide to where the transitions are.
 
 The `plot` method draws the fitted curve over the data and the estimated domain
-warps below, which is where the jumps become visible: three spikes standing out
-of an otherwise flat sequence.
+warps below, which is where the jumps become visible: spikes standing out of an
+otherwise flat sequence. Since version 2.0.0 it builds the figure with
+**ggplot2** and returns it, so the two panels are facets of one object and the
+result can be themed or saved like any other plot; pass `use_ggplot = FALSE`
+for base graphics instead.
 
 ```{r fig.width=6, fig.height=6}
-plot(fit_sim, xlab = "x", ylab = "y")
+plot(fit_mle, xlab = "x", ylab = "y")
 ```
+
+```{r fig.width=6, fig.height=6}
+plot(fit_atw, xlab = "x", ylab = "y")
+```
+
+The two are hard to tell apart, which is the point: the alternating algorithm
+reproduces the maximum-likelihood fit at a fraction of the cost, and it no
+longer needs that fit in order to run.
 
 Superimposing the true signal confirms that the fit is smooth between the
 breaks and sharp at them.
@@ -192,8 +234,8 @@ breaks and sharp at them.
 ```{r fig.width=6, fig.height=4}
 plot(x, y, pch = 16, cex = 0.6, col = "grey55", xlab = "x", ylab = "y")
 lines(x, g1(x), col = "grey20", lty = 2)
-lines(fit_sim$x, fit_sim$smoothed_level, col = "firebrick", lwd = 2)
-abline(v = ssj_breaks(fit_sim)$x, lty = 3, col = "firebrick")
+lines(fit_atw$x, fit_atw$smoothed_level, col = "firebrick", lwd = 2)
+abline(v = ssj_breaks(fit_atw)$x, lty = 3, col = "firebrick")
 legend("bottomleft", bty = "n", cex = 0.85,
        lty = c(2, 1), lwd = c(1, 2), col = c("grey20", "firebrick"),
        legend = c("true signal", "smoothing spline with jumps"))
@@ -263,14 +305,20 @@ band, whenever the estimator returns pointwise variances (`ssj_mle()`,
 plot(fit, xlab = "Temperature (Celsius)", ylab = "Demand (MWh)")
 ```
 
-All the declared breaks sit in the cooling region, between 27 and 30 degrees,
-which is consistent with air conditioning being switched on once a comfort
-threshold is crossed, and they are upward: demand rises abruptly. This is the
-same reading as in the paper, whose Section 4.1 identifies the jump at 27
-degrees as the most relevant one. A classical smoothing spline would round
-these transitions off into a gentle curve. Lowering `ebic_xi` makes the search
-penalty weaker and returns further, smaller breaks at low temperatures, where
-electric heating plays a minor role in Italy.
+The declared breaks fall into two groups, and their signs separate them
+cleanly. Above about 22 degrees they are upward and grow with temperature,
+peaking either side of 27 degrees, which is consistent with air conditioning
+being switched on once a comfort threshold is crossed; the paper's Section 4.1
+identifies the jump at 27 degrees as the most relevant one, and it appears here
+as the largest of the warps. Below 16 degrees they are downward and smaller,
+tracing the mild role of electric heating in Italy: demand falls as the weather
+warms towards the comfort zone. A classical smoothing spline would round all of
+these transitions off into a gentle curve.
+
+Two of the declarations, at 27.0 and 27.1 degrees, are the same transition seen
+twice, for the reason discussed in the simulated example above. Raising
+`ebic_xi`, or the thresholds of `ssj_breaks()`, returns a shorter list
+concentrated on the cooling region alone.
 
 The same data can be analysed with the CSSD algorithm of Storath and Weinmann
 (2024), which penalises the number of discontinuities directly instead of a
@@ -286,12 +334,12 @@ several orders of magnitude and return an essentially interpolating fit.
 # robust noise scale, immune to the jumps themselves
 sig <- mad(diff(demand_temp$Load[order(demand_temp$Temperature)])) / sqrt(2)
 
-fit_cssd <- ssj_cssd_potts(demand_temp$Load, demand_temp$Temperature,
+fit_cssd <- ssj_cssd_dp(demand_temp$Load, demand_temp$Temperature,
                            p = 0.9, gamma = 10, delta = sig)
 fit_cssd
 ```
 
-`ssj_cssd_potts()` returns an `ssj` object too, so the same `print` and `plot`
+`ssj_cssd_dp()` returns an `ssj` object too, so the same `print` and `plot`
 methods apply. There is no lower panel here: CSSD has no domain warps to show,
 because its discontinuity set is part of the solution of the underlying
 combinatorial problem rather than a by-product of a continuous penalty.
@@ -301,11 +349,11 @@ plot(fit_cssd, xlab = "Temperature (Celsius)", ylab = "Demand (MWh)")
 ```
 
 The fitted piecewise cubic spline can be evaluated at arbitrary temperatures
-with `predict_cssd_potts()`, which is what makes the size of a discontinuity
+with `predict_cssd_dp()`, which is what makes the size of a discontinuity
 directly readable:
 
 ```{r}
-predict_cssd_potts(fit_cssd, xnew = c(20, 26.9, 27.1, 30))
+predict_cssd_dp(fit_cssd, xnew = c(20, 26.9, 27.1, 30))
 ```
 
 The two methods are quite different -- one warps the domain under a budget

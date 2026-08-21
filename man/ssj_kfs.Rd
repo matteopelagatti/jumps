@@ -10,10 +10,11 @@ ssj_kfs(
   x,
   lambda,
   maxsum = max(x) - min(x),
+  weights = NULL,
   edf = TRUE,
   parinit = NULL,
   last_delta = 1,
-  ebic_xi = 1
+  ebic_xi = 0.15
 )
 }
 \arguments{
@@ -29,6 +30,15 @@ process noise variance).}
 the units of \code{x} and defaults to the range of \code{x}, the same
 upper end as the grid searched by \code{\link{auto_ssj_kfs}}.}
 
+\item{weights}{optional numeric vector of positive observation weights, one
+per element of \code{y}. The observation variance becomes
+\eqn{H_t = \lambda\sigma^2/w_t}, so a point carrying weight \eqn{w_t} is
+treated as the mean of \eqn{w_t} independent observations. This is what
+makes it correct to collapse tied values of \code{x} to their mean and
+pass the number of replicates as the weight: the Gaussian likelihood
+factorises, so the weighted fit on the collapsed data is identical to the
+fit on the raw replicates. The default, \code{NULL}, means unit weights.}
+
 \item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
 are computed as the trace of the hat matrix; if \code{FALSE} the non-zero
 \eqn{\gamma_t} are counted.}
@@ -42,8 +52,8 @@ observation (it does not affect the fit; default 1).}
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]}: strength of the extended-BIC
 penalty for searching over the \code{n-1} candidate jump locations
-(default 1, the Chen and Chen (2008) recommendation for sparse selection;
-0 reduces \code{ebic} to plain \code{bic}).}
+(default 0.15; 0 reduces \code{ebic} to plain \code{bic}). The default is
+calibrated rather than taken from theory; see the note below.}
 }
 \value{
 An object of class \code{ssj} (a list, so that all the slots below
@@ -54,7 +64,12 @@ An object of class \code{ssj} (a list, so that all the slots below
  \item \code{nobs}: number of observations.
  \item \code{df}: model's degrees of freedom.
  \item \code{maxsum}: the \code{maxsum} argument.
- \item \code{loglik}: Gaussian log-likelihood at the optimum.
+ \item \code{loglik}: Gaussian log-likelihood at the optimum, on the scale
+   of \code{y} as supplied. Note that the diffuse initial conditions are
+   approximated by a large proper prior, so the absolute value carries an
+   additive constant set by that convention; differences across
+   \code{maxsum} for one data set, which is what the information criteria
+   compare, are unaffected.
  \item \code{pars}: named vector (sigma, lambda).
  \item \code{gamma}: estimated time-warp vector of length \code{n-1}.
  \item \code{ic}: vector of information criteria (aic, aicc, bic, hq, ebic).
@@ -78,7 +93,34 @@ entering the transition matrix. The optimisation is carried out with the
 gradient-based AUGLAG/LBFGS algorithms of the NLopt library, with a fallback
 to CCSAQ whenever the KKT conditions are not satisfied at the reported
 optimum.
+
+
+Tied values of \code{x} are collapsed to their weighted mean before fitting,
+and the fitted values are returned at the vector of unique, sorted \code{x}
+available in the \code{x} slot of the output. This keeps the problem well
+posed: with ties the interval between two replicates has zero length, and a
+warp placed there would be a discontinuity between two observations recorded
+at the same \code{x}, which is not identified. The replicate counts become
+observation weights automatically, so no information is lost.
 }
+\section{Choosing \code{ebic_xi}}{
+
+The default is the value that minimises worst-case regret in root mean
+squared error over the 48-cell design of
+\code{inst/scripts/xi_calibration.R}. It is lower than the 0.3 used by
+\code{\link{ssj_mle}}, and the reason is not that the models differ -- at a
+given \code{lambda} and budget they are the same fit -- but that the
+procedures do. \code{\link{auto_ssj_kfs}} holds \code{lambda} fixed across
+the budget grid, whereas \code{\link{auto_ssj_mle}} re-estimates it at every
+point; being able to re-tune the smoothness as the budget grows gives more
+scope to overfit, and so calls for a heavier penalty.
+
+The value sits below the Chen and Chen (2008) consistency floor of about 0.5
+because the plain BIC term already charges for each activated warp through
+\code{df}, at about \eqn{0.34\log n} per declared jump for this estimator --
+an implicit charge of roughly 0.17 on the \eqn{\xi} scale.
+}
+
 \examples{
 # 'maxsum' is a warping budget in the units of x; the range of eruptions
 # is about 3.5, so a budget of 1 is already generous.

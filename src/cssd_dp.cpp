@@ -228,6 +228,19 @@ static void eval_hermite_interval(const VectorXd& xq,
     int n  = xi.size();
     for (int k = 0; k < nq; ++k) {
         double xv = xq[k];
+        // Outside the segment's own knots, extend LINEARLY from the end knot,
+        // matching linext_pp() in the reference implementation of Storath and
+        // Weinmann.  Extrapolating the end cubic instead (which is what
+        // clamping the segment index below would do on its own) diverges
+        // quickly and is not the convention the method is defined with.
+        if (xv <= xi[0]) {
+            out[k] = hermite[0] + hermite[1] * (xv - xi[0]);
+            continue;
+        }
+        if (xv >= xi[n-1]) {
+            out[k] = hermite[2*(n-1)] + hermite[2*(n-1)+1] * (xv - xi[n-1]);
+            continue;
+        }
         // Find containing sub-interval via binary search
         int seg = std::lower_bound(xi.data(), xi.data() + n, xv) - xi.data();
         seg = std::max(0, std::min(n - 2, seg - 1));
@@ -256,7 +269,7 @@ static void eval_hermite_interval(const VectorXd& xq,
 //   energy    : optimal target function value (excluding gamma*|J| already added)
 // ---------------------------------------------------------------------------
 // [[Rcpp::export]]
-List cssd_potts(NumericVector y_in, NumericVector x_in, double p, double gamma,
+List cssd_dp(NumericVector y_in, NumericVector x_in, double p, double gamma,
                 NumericVector delta_in) {
     int n = y_in.size();
     if (n < 2) stop("Need at least 2 observations.");
@@ -392,17 +405,17 @@ List cssd_potts(NumericVector y_in, NumericVector x_in, double p, double gamma,
 
 // ---------------------------------------------------------------------------
 // Evaluate the piecewise cubic spline at arbitrary query points.
-// Called after cssd_potts() to get smooth curves on a fine grid.
+// Called after cssd_dp() to get smooth curves on a fine grid.
 //
 // @param y_in, x_in    training data (sorted)
-// @param f_hat_in      fitted values at training points (from cssd_potts)
-// @param disc_locs_in  discontinuity locations (from cssd_potts)
+// @param f_hat_in      fitted values at training points (from cssd_dp)
+// @param disc_locs_in  discontinuity locations (from cssd_dp)
 // @param xq_in         query points to evaluate at
 // @param p             stiffness parameter
 // @param delta_in      noise std vector
 // ---------------------------------------------------------------------------
 // [[Rcpp::export]]
-NumericVector cssd_potts_predict(NumericVector y_in, NumericVector x_in,
+NumericVector cssd_dp_predict(NumericVector y_in, NumericVector x_in,
                                   NumericVector f_hat_in,
                                   NumericVector disc_locs_in,
                                   NumericVector xq_in,

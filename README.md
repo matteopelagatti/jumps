@@ -78,9 +78,9 @@ $$\min_{f, J} p \sum_i \left(\frac{y_i - f(x_i)}{\delta_i}
 ight)^2 + (1-p) \int (f''(t))^2\,dt + \gamma\,|J|.$$
 
 The global minimiser is found by dynamic programming with incremental QR updates
-(Givens rotations). The relevant functions are `ssj_cssd_potts()` for a given pair
+(Givens rotations). The relevant functions are `ssj_cssd_dp()` for a given pair
 $(p, \gamma)$, `auto_ssj_cssd()` for K-fold cross-validated selection of both
-parameters, and `predict_cssd_potts()` to evaluate the fitted piecewise cubic spline
+parameters, and `predict_cssd_dp()` to evaluate the fitted piecewise cubic spline
 at arbitrary locations. The algorithm is $O(n^2)$ in time and memory, so it is best
 suited to samples of at most a few thousand points; `ssj_cssd()` provides a much
 faster piecewise-constant (total-variation) approximation for larger problems.

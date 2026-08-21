@@ -37,7 +37,9 @@ test_that("ssj_fix returns the documented slots", {
   expect_true(all(c("opt", "nobs", "df", "maxsum", "loglik", "pars", "sigmas",
                     "ic", "smoothed_level", "var_smoothed_level", "x") %in%
                     names(fit)))
-  expect_equal(fit$nobs, length(faithful$waiting))
+  # faithful$eruptions has ties, which are now collapsed before fitting
+  expect_equal(fit$nobs, length(unique(faithful$eruptions)))
+  expect_length(fit$x, fit$nobs)
   expect_true(all(fit$var_smoothed_level >= 0))
 })
 
@@ -102,7 +104,7 @@ test_that("ssj_breaks handles the CSSD competitor and TV denoising", {
   set.seed(1)
   x <- sort(runif(80)); y <- sin(4*pi*x) + (x > 0.5) + rnorm(80, sd = 0.1)
 
-  fc <- ssj_cssd_potts(y, x, p = 0.999, gamma = 4)
+  fc <- ssj_cssd_dp(y, x, p = 0.999, gamma = 4)
   expect_s3_class(fc, "ssj")
   expect_identical(fc$method, "cssd")
   bc <- ssj_breaks(fc)
@@ -128,7 +130,7 @@ test_that("print.ssj does not leak partial matches and labels the budget", {
     print(ssj_fix(fa$waiting, fa$eruptions, lambda = 1, maxsum = 150)))
   expect_true(any(grepl("additional standard deviations", out_fix)))
 
-  out_cssd <- capture.output(print(ssj_cssd_potts(faithful$waiting,
+  out_cssd <- capture.output(print(ssj_cssd_dp(faithful$waiting,
                                                  faithful$eruptions,
                                                  p = 0.99, gamma = 5)))
   expect_true(any(grepl("Storath and Weinmann", out_cssd)))
@@ -142,17 +144,20 @@ test_that("print.ssj returns its argument invisibly", {
 })
 
 test_that("plot.ssj draws and restores the graphical parameters", {
+  # this is about the base-graphics path: it splits the device into two panels
+  # and must put par() back as it found it
   f <- fit_atw_()
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
   before <- par("mfrow")
-  expect_null(plot(f))
+  expect_null(plot(f, use_ggplot = FALSE))
   expect_identical(par("mfrow"), before)
-  expect_null(plot(f, show_warp = FALSE))
-  expect_null(plot(f, thresh = 0.1))
-  expect_null(plot(f, main = "a title of my own"))
+  expect_null(plot(f, use_ggplot = FALSE, show_warp = FALSE))
+  expect_null(plot(f, use_ggplot = FALSE, thresh = 0.1))
+  expect_null(plot(f, use_ggplot = FALSE, main = "a title of my own"))
   expect_null(plot(ssj_mle(faithful$waiting[1:60], faithful$eruptions[1:60],
-                           maxsum = 1), prob = 0.95))
+                           maxsum = 1), prob = 0.95, use_ggplot = FALSE))
+  expect_identical(par("mfrow"), before)
 })
 
 test_that("ssj_breaks rejects objects of the wrong class", {
@@ -195,8 +200,14 @@ test_that("plot.ssj draws no title unless one is asked for", {
   f <- fit_atw_()
   pdf(NULL)
   on.exit(dev.off(), add = TRUE)
-  expect_null(plot(f))                       # untitled
-  expect_null(plot(f, main = "custom"))      # titled
+  # base graphics: drawn, so the value is NULL either way
+  expect_null(plot(f, use_ggplot = FALSE))                  # untitled
+  expect_null(plot(f, use_ggplot = FALSE, main = "custom"))  # titled
+  # ggplot2 is the default and returns the object, so the title can be read off
+  skip_if_not_installed("ggplot2")
+  expect_null(ggplot2::ggplot_build(plot(f))$plot$labels$title)
+  expect_identical(ggplot2::ggplot_build(plot(f, main = "custom"))$plot$labels$title,
+                   "custom")
 })
 
 test_that("fits do not depend on the order in which observations are supplied", {
@@ -217,4 +228,265 @@ test_that("fits do not depend on the order in which observations are supplied", 
                ssj_fix(y,    x,    lambda = 1, maxsum = 0.3)$smoothed_level)
   expect_equal(ssj_atw(y[i], x[i], lambda = 1, maxsum = 0.3)$smoothed_level,
                ssj_atw(y,    x,    lambda = 1, maxsum = 0.3)$smoothed_level)
+})
+
+test_that("predict.ssj returns the cubic the model implies", {
+  set.seed(2026)
+  x <- sort(runif(50)); y <- sin(4*pi*x) + (x > 0.5) + rnorm(50, sd = 0.1)
+  fit <- ssj_kfs(y, x, lambda = 0.01, maxsum = 0.3)
+
+  # at the sampling sites it must reproduce the fit exactly
+  expect_equal(predict(fit, fit$x), fit$smoothed_level)
+  expect_equal(predict(fit), fit$smoothed_level)
+
+  # order of the query points is preserved
+  xq <- c(0.8, 0.2, 0.5, 0.35)
+  expect_equal(predict(fit, xq)[order(xq)], predict(fit, sort(xq)))
+
+  # the cubic is NOT the linear interpolation of the fitted values
+  xg  <- seq(min(x), max(x), length.out = 300)
+  cub <- predict(fit, xg)
+  lin <- stats::approx(fit$x, fit$smoothed_level, xout = xg, rule = 2)$y
+  expect_gt(max(abs(cub - lin)), 1e-6)
+  expect_true(all(is.finite(cub)))
+
+  # beyond the data the extension is linear: second differences vanish
+  xo <- seq(max(x) + 0.01, max(x) + 0.20, length.out = 12)
+  expect_lt(max(abs(diff(diff(predict(fit, xo))))), 1e-8)
+})
+
+test_that("predict.ssj works for every estimator", {
+  set.seed(5)
+  x <- sort(runif(40)); y <- sin(3*pi*x) + rnorm(40, sd = 0.1)
+  fits <- list(
+    mle  = ssj_mle(y, x, maxsum = 0.2),
+    kfs  = ssj_kfs(y, x, lambda = 1, maxsum = 0.2),
+    atw  = ssj_atw(y, x, lambda = 1, maxsum = 0.2),
+    fix  = ssj_fix(y, x, lambda = 1, maxsum = 5),
+    cssd = ssj_cssd_dp(y, x, p = 0.99, gamma = 2),
+    tv   = ssj_cssd(y, x, lambda = 0.5)
+  )
+  for (nm in names(fits)) {
+    f <- fits[[nm]]
+    expect_equal(predict(f, f$x), f$smoothed_level, tolerance = 1e-6,
+                 info = nm)
+    expect_true(all(is.finite(predict(f, seq(0, 1, length.out = 50)))), info = nm)
+  }
+})
+
+test_that("CSSD extrapolates linearly beyond a segment, not with the end cubic", {
+  set.seed(1)
+  x <- sort(runif(60)); y <- sin(4*pi*x) + (x > 0.5) + rnorm(60, sd = 0.1)
+  f <- ssj_cssd_dp(y, x, p = 0.999, gamma = 4)
+
+  # outside the data range the second difference of the prediction must vanish
+  for (xo in list(seq(min(x) - 0.30, min(x) - 0.02, length.out = 10),
+                  seq(max(x) + 0.02, max(x) + 0.30, length.out = 10))) {
+    p <- predict(f, xo)
+    expect_lt(max(abs(diff(diff(p)))), 1e-8)
+  }
+})
+
+test_that("extrapolation is not amplified by a warp on a boundary interval", {
+  # The warps live strictly BETWEEN observations, so outside the sample the
+  # dilation is 1.  Extrapolating with the physical slope just inside the end
+  # interval would multiply the slope by tau/delta, which on a boundary
+  # interval carrying a warp can be a factor of tens.
+  set.seed(2026)
+  x <- sort(runif(60)); y <- sin(4*pi*x) + (x > 0.5) + rnorm(60, sd = 0.1)
+  f <- ssj_kfs(y, x, lambda = 0.01, maxsum = 0.3)
+  n <- length(f$x)
+
+  h <- 1e-5
+  left  <- (predict(f, f$x[1] - h) - predict(f, f$x[1] - 2*h)) / h
+  right <- (predict(f, f$x[n] + 2*h) - predict(f, f$x[n] + h)) / h
+  expect_equal(left,  f$smoothed_slope[1], tolerance = 1e-5)
+  expect_equal(right, f$smoothed_slope[n], tolerance = 1e-5)
+
+  # and it stays bounded: extrapolating a tenth of the range must not move the
+  # prediction by more than a few times the range of the fit
+  rng <- diff(range(f$smoothed_level))
+  far <- predict(f, c(f$x[1] - 0.1*diff(range(f$x)),
+                      f$x[n] + 0.1*diff(range(f$x))))
+  expect_true(all(abs(far - mean(f$smoothed_level)) < 20 * rng))
+})
+
+test_that("weighted collapsing reproduces the fit on the raw replicates", {
+  # Collapsing ties to their mean and passing the replicate counts as weights
+  # is sufficient at a FIXED smoothing parameter: the discarded within-group
+  # sum of squares does not involve f.
+  f <- function(x) sin(2*pi*x) + 0.6*(x > 0.5)
+  set.seed(11)
+  xu <- sort(runif(30)); m <- sample(1:5, 30, replace = TRUE)
+  x  <- rep(xu, times = m); y <- f(x) + rnorm(length(x), sd = 0.15)
+  ybar <- as.numeric(tapply(y, x, mean)); w <- as.numeric(table(x))
+  expect_gt(max(m), min(m))            # weights must actually be unequal
+
+  # the fitters collapse ties themselves, so both fits live on the 40 sites
+  raw <- ssj_kfs(y, x, lambda = 0.05, maxsum = 0)
+  wgt <- ssj_kfs(ybar, xu, lambda = 0.05, maxsum = 0, weights = w)
+  expect_length(raw$smoothed_level, length(xu))
+  expect_equal(raw$smoothed_level, wgt$smoothed_level, tolerance = 1e-3)
+
+  raw <- ssj_atw(y, x, lambda = 0.05, maxsum = 0)
+  wgt <- ssj_atw(ybar, xu, lambda = 0.05, maxsum = 0, weights = w)
+  expect_equal(raw$smoothed_level, wgt$smoothed_level)
+  expect_equal(raw$df, wgt$df)
+})
+
+test_that("unit weights reproduce the unweighted fit exactly", {
+  set.seed(5)
+  x <- sort(runif(40)); y <- sin(3*pi*x) + rnorm(40, sd = 0.1)
+  o <- rep(1, 40)
+  for (nm in c("kfs", "mle", "fix", "atw")) {
+    a <- switch(nm, kfs = ssj_kfs(y, x, lambda = 1, maxsum = 0.2),
+                    mle = ssj_mle(y, x, maxsum = 0.2),
+                    fix = ssj_fix(y, x, lambda = 1, maxsum = 2),
+                    atw = ssj_atw(y, x, lambda = 1, maxsum = 0.2))
+    b <- switch(nm, kfs = ssj_kfs(y, x, lambda = 1, maxsum = 0.2, weights = o),
+                    mle = ssj_mle(y, x, maxsum = 0.2, weights = o),
+                    fix = ssj_fix(y, x, lambda = 1, maxsum = 2, weights = o),
+                    atw = ssj_atw(y, x, lambda = 1, maxsum = 0.2, weights = o))
+    expect_equal(a$smoothed_level, b$smoothed_level, info = nm)
+    expect_equal(a$ic, b$ic, info = nm)
+  }
+})
+
+test_that("weights are validated and forwarded by the auto_* wrappers", {
+  set.seed(6)
+  x <- sort(runif(30)); y <- sin(3*pi*x) + rnorm(30, sd = 0.1)
+  expect_error(ssj_kfs(y, x, lambda = 1, weights = c(-1, rep(1, 29))), "positive")
+  expect_error(ssj_kfs(y, x, lambda = 1, weights = rep(1, 5)), "same length")
+  expect_silent(f <- ssj_kfs(y, x, lambda = 1, maxsum = 0.2, weights = 3))
+  expect_s3_class(f, "ssj")
+
+  w <- rep(c(1, 4), 15)
+  for (nm in c("atw", "kfs")) {
+    a <- switch(nm, atw = auto_ssj_atw(y, x, lambda = 1, grid = c(0, 0.2)),
+                    kfs = auto_ssj_kfs(y, x, lambda = 1, grid = c(0, 0.2)))
+    b <- switch(nm, atw = auto_ssj_atw(y, x, lambda = 1, grid = c(0, 0.2), weights = w),
+                    kfs = auto_ssj_kfs(y, x, lambda = 1, grid = c(0, 0.2), weights = w))
+    expect_false(isTRUE(all.equal(a$smoothed_level, b$smoothed_level)), info = nm)
+  }
+})
+
+test_that("ss_within restores the noise information lost by collapsing", {
+  f <- function(x) sin(2*pi*x) + 0.6*(x > 0.5)
+  set.seed(11)
+  xu <- sort(runif(40)); m <- sample(1:6, 40, replace = TRUE)
+  x  <- rep(xu, times = m); y <- f(x) + rnorm(length(x), sd = 0.15)
+  yb <- as.numeric(tapply(y, x, mean)); w <- as.numeric(table(x))
+  ssw <- sum(tapply(y, x, function(v) sum((v - mean(v))^2)))
+  ve <- function(f) f$pars[["lambda"]] * f$pars[["sigma"]]^2
+
+  raw  <- ssj_mle(y,  x,  maxsum = 0)
+  bare <- ssj_mle(yb, xu, maxsum = 0, weights = w)
+  full <- ssj_mle(yb, xu, maxsum = 0, weights = w, ss_within = ssw)
+
+  # collapsing alone overstates the noise; ss_within recovers the raw value
+  expect_gt(ve(bare) / ve(raw), 2)
+  expect_equal(ve(full), ve(raw), tolerance = 1e-3)
+  expect_equal(full$pars[["lambda"]], raw$pars[["lambda"]], tolerance = 1e-2)
+
+  # and the pure-smooth fit then matches the raw one
+  expect_equal(full$smoothed_level, raw$smoothed_level, tolerance = 1e-3)
+})
+
+test_that("ss_within is validated and inert when omitted", {
+  set.seed(7)
+  x <- sort(runif(30)); y <- sin(3*pi*x) + rnorm(30, sd = 0.1)
+  a <- ssj_mle(y, x, maxsum = 0.2)
+  b <- ssj_mle(y, x, maxsum = 0.2, ss_within = NULL)
+  expect_equal(a$smoothed_level, b$smoothed_level)
+
+  # needs weights summing to more than length(y), i.e. genuine replicate counts
+  expect_error(ssj_mle(y, x, maxsum = 0.2, ss_within = 1), "weights")
+  expect_error(ssj_mle(y, x, maxsum = 0.2, weights = rep(2, 30),
+                       ss_within = -1), "non-negative")
+})
+
+test_that("tied x are collapsed automatically by every estimator", {
+  f <- function(x) sin(2*pi*x) + 0.6*(x > 0.5)
+  set.seed(11)
+  xu <- sort(runif(40)); m <- sample(1:6, 40, replace = TRUE)
+  x  <- rep(xu, times = m); y <- f(x) + rnorm(length(x), sd = 0.15)
+  yb <- as.numeric(tapply(y, x, mean)); w <- as.numeric(table(x))
+  ssw <- sum(tapply(y, x, function(v) sum((v - mean(v))^2)))
+
+  for (nm in c("mle", "kfs", "fix", "atw")) {
+    auto <- switch(nm, mle = ssj_mle(y, x, maxsum = 0),
+                       kfs = ssj_kfs(y, x, lambda = 0.05, maxsum = 0),
+                       fix = ssj_fix(y, x, lambda = 0.05, maxsum = 0),
+                       atw = ssj_atw(y, x, lambda = 0.05, maxsum = 0))
+    expect_equal(length(auto$x), length(xu), info = nm)
+    expect_equal(auto$x, xu, tolerance = 1e-8, info = nm)
+
+    man <- switch(nm,
+      mle = ssj_mle(yb, xu, maxsum = 0, weights = w, ss_within = ssw),
+      kfs = ssj_kfs(yb, xu, lambda = 0.05, maxsum = 0, weights = w),
+      fix = ssj_fix(yb, xu, lambda = 0.05, maxsum = 0, weights = w),
+      atw = ssj_atw(yb, xu, lambda = 0.05, maxsum = 0, weights = w))
+    # collapsing internally must equal collapsing by hand and passing weights
+    expect_equal(auto$smoothed_level, man$smoothed_level,
+                 tolerance = 1e-3, info = nm)
+  }
+})
+
+test_that("a missing first observation no longer poisons the filter", {
+  # llt()/llt_delta() initialised t = 0 without the missing-value guard used in
+  # the loop, so a leading NA made the whole log-likelihood NA.
+  set.seed(3)
+  x <- sort(runif(50)); y <- sin(3*pi*x) + rnorm(50, sd = 0.1)
+  y1 <- y; y1[1] <- NA
+  for (fit in list(ssj_mle(y1, x, maxsum = 0),
+                   ssj_kfs(y1, x, lambda = 1, maxsum = 0),
+                   ssj_fix(y1, x, lambda = 1, maxsum = 2))) {
+    expect_true(all(is.finite(fit$smoothed_level)))
+    expect_true(is.finite(fit$loglik))
+  }
+  y2 <- y; y2[c(1, 2, 25, 50)] <- NA
+  expect_true(all(is.finite(ssj_mle(y2, x, maxsum = 0.2)$smoothed_level)))
+})
+
+test_that("a wrong-length parinit is rejected with a message naming the length", {
+  # A wrong-length parinit used to reach nloptr as an NA-padded x0 and fail with
+  # the opaque "x0 contains NA".
+  set.seed(5)
+  x <- sort(runif(30)); y <- sin(2*pi*x) + rnorm(30, sd = 0.1)
+
+  # ssj_mle expects n+1 = 31: (sigma, lambda, gamma_1, ..., gamma_{n-1})
+  expect_error(ssj_mle(y, x, maxsum = 0.2, parinit = c(0.1, 1, rep(0, 10))),
+               "length 31, not 12")
+  expect_error(ssj_mle(y, x, maxsum = 0.2, parinit = c(0.1, 1, rep(0, 10))),
+               "gamma_1")
+
+  # ssj_kfs expects n = 30: (sigma, gamma_1, ..., gamma_{n-1})
+  expect_error(ssj_kfs(y, x, lambda = 1, maxsum = 0.2, parinit = rep(0.1, 31)),
+               "length 30, not 31")
+
+  # ssj_fix expects n+1 = 31: (sigma, sigma_1, ..., sigma_n)
+  expect_error(ssj_fix(y, x, lambda = 1, maxsum = 2, parinit = rep(0.1, 29)),
+               "length 31, not 29")
+
+  # a correct-length parinit still goes through
+  expect_silent(ssj_kfs(y, x, lambda = 1, maxsum = 0.2,
+                        parinit = c(sd(y)/10, rep(0, 29))))
+})
+
+test_that("the parinit length error counts distinct x, and says so", {
+  # The expected length follows the number of DISTINCT x after ties have been
+  # collapsed, so length(y) is the wrong thing for a caller to reason from.
+  x <- rep(sort(runif(20)), each = 3)          # 60 observations, 20 distinct x
+  set.seed(7)
+  y <- sin(2*pi*x) + rnorm(60, sd = 0.1)
+
+  # length(y) + 1 = 61 looks right but is not: the fitters want 21 / 20
+  expect_error(ssj_mle(y, x, maxsum = 0.2, parinit = rep(0.1, 61)),
+               "length 21, not 61")
+  expect_error(ssj_mle(y, x, maxsum = 0.2, parinit = rep(0.1, 61)),
+               "distinct values of 'x'")
+  expect_error(ssj_kfs(y, x, lambda = 1, maxsum = 0.2, parinit = rep(0.1, 60)),
+               "length 20, not 60")
+  expect_error(ssj_fix(y, x, lambda = 1, maxsum = 2, parinit = rep(0.1, 61)),
+               "length 21, not 61")
 })

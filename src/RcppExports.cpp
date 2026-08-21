@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // solve_jump_spline_fast
-List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in, double lambda, double M, int max_iter, double tol, double learning_rate, NumericVector gamma_init, double ebic_xi);
-RcppExport SEXP _jumps_solve_jump_spline_fast(SEXP x_inSEXP, SEXP y_inSEXP, SEXP lambdaSEXP, SEXP MSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP learning_rateSEXP, SEXP gamma_initSEXP, SEXP ebic_xiSEXP) {
+List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in, double lambda, double M, int max_iter, double tol, double learning_rate, NumericVector gamma_init, double ebic_xi, NumericVector w_in);
+RcppExport SEXP _jumps_solve_jump_spline_fast(SEXP x_inSEXP, SEXP y_inSEXP, SEXP lambdaSEXP, SEXP MSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP learning_rateSEXP, SEXP gamma_initSEXP, SEXP ebic_xiSEXP, SEXP w_inSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -26,7 +26,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type learning_rate(learning_rateSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type gamma_init(gamma_initSEXP);
     Rcpp::traits::input_parameter< double >::type ebic_xi(ebic_xiSEXP);
-    rcpp_result_gen = Rcpp::wrap(solve_jump_spline_fast(x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi));
+    Rcpp::traits::input_parameter< NumericVector >::type w_in(w_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_jump_spline_fast(x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi, w_in));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -45,9 +46,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// cssd_potts
-List cssd_potts(NumericVector y_in, NumericVector x_in, double p, double gamma, NumericVector delta_in);
-RcppExport SEXP _jumps_cssd_potts(SEXP y_inSEXP, SEXP x_inSEXP, SEXP pSEXP, SEXP gammaSEXP, SEXP delta_inSEXP) {
+// cssd_dp
+List cssd_dp(NumericVector y_in, NumericVector x_in, double p, double gamma, NumericVector delta_in);
+RcppExport SEXP _jumps_cssd_dp(SEXP y_inSEXP, SEXP x_inSEXP, SEXP pSEXP, SEXP gammaSEXP, SEXP delta_inSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -56,13 +57,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type p(pSEXP);
     Rcpp::traits::input_parameter< double >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type delta_in(delta_inSEXP);
-    rcpp_result_gen = Rcpp::wrap(cssd_potts(y_in, x_in, p, gamma, delta_in));
+    rcpp_result_gen = Rcpp::wrap(cssd_dp(y_in, x_in, p, gamma, delta_in));
     return rcpp_result_gen;
 END_RCPP
 }
-// cssd_potts_predict
-NumericVector cssd_potts_predict(NumericVector y_in, NumericVector x_in, NumericVector f_hat_in, NumericVector disc_locs_in, NumericVector xq_in, double p, NumericVector delta_in);
-RcppExport SEXP _jumps_cssd_potts_predict(SEXP y_inSEXP, SEXP x_inSEXP, SEXP f_hat_inSEXP, SEXP disc_locs_inSEXP, SEXP xq_inSEXP, SEXP pSEXP, SEXP delta_inSEXP) {
+// cssd_dp_predict
+NumericVector cssd_dp_predict(NumericVector y_in, NumericVector x_in, NumericVector f_hat_in, NumericVector disc_locs_in, NumericVector xq_in, double p, NumericVector delta_in);
+RcppExport SEXP _jumps_cssd_dp_predict(SEXP y_inSEXP, SEXP x_inSEXP, SEXP f_hat_inSEXP, SEXP disc_locs_inSEXP, SEXP xq_inSEXP, SEXP pSEXP, SEXP delta_inSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -73,7 +74,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type xq_in(xq_inSEXP);
     Rcpp::traits::input_parameter< double >::type p(pSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type delta_in(delta_inSEXP);
-    rcpp_result_gen = Rcpp::wrap(cssd_potts_predict(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in));
+    rcpp_result_gen = Rcpp::wrap(cssd_dp_predict(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -158,10 +159,10 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_jumps_solve_jump_spline_fast", (DL_FUNC) &_jumps_solve_jump_spline_fast, 9},
+    {"_jumps_solve_jump_spline_fast", (DL_FUNC) &_jumps_solve_jump_spline_fast, 10},
     {"_jumps_cssd_irregular_eigen", (DL_FUNC) &_jumps_cssd_irregular_eigen, 5},
-    {"_jumps_cssd_potts", (DL_FUNC) &_jumps_cssd_potts, 5},
-    {"_jumps_cssd_potts_predict", (DL_FUNC) &_jumps_cssd_potts_predict, 7},
+    {"_jumps_cssd_dp", (DL_FUNC) &_jumps_cssd_dp, 5},
+    {"_jumps_cssd_dp_predict", (DL_FUNC) &_jumps_cssd_dp_predict, 7},
     {"_jumps_da", (DL_FUNC) &_jumps_da, 5},
     {"_jumps_llt", (DL_FUNC) &_jumps_llt, 22},
     {"_jumps_llt_delta", (DL_FUNC) &_jumps_llt_delta, 23},

@@ -10,6 +10,7 @@ ssj_fix(
   x,
   lambda,
   maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
+  weights = NULL,
   edf = TRUE,
   parinit = NULL,
   last_delta = 1
@@ -26,6 +27,15 @@ ssj_fix(
 this parameterises the jumps through the disturbance variances, so, unlike
 the budget of \code{\link{ssj_mle}}, \code{\link{ssj_kfs}} and
 \code{\link{ssj_atw}}, it is \emph{not} expressed in the units of \code{x}.}
+
+\item{weights}{optional numeric vector of positive observation weights, one
+per element of \code{y}. The observation variance becomes
+\eqn{H_t = \lambda\sigma^2/w_t}, so a point carrying weight \eqn{w_t} is
+treated as the mean of \eqn{w_t} independent observations. This is what
+makes it correct to collapse tied values of \code{x} to their mean and
+pass the number of replicates as the weight: the Gaussian likelihood
+factorises, so the weighted fit on the collapsed data is identical to the
+fit on the raw replicates. The default, \code{NULL}, means unit weights.}
 
 \item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
 are computed, otherwise the number of degrees of freedom is computed in the
@@ -65,6 +75,15 @@ Lower-level function for smoothing splines with jumps and a fixed smoothing
 parameter. The additional variance of the level disturbance at each sampling
 site is estimated by constrained maximum likelihood, using the Kalman filter
 and smoother on the state-space form of the cubic smoothing spline.
+}
+\details{
+Tied values of \code{x} are collapsed to their weighted mean before fitting,
+and the fitted values are returned at the vector of unique, sorted \code{x}
+available in the \code{x} slot of the output. This keeps the problem well
+posed: with ties the interval between two replicates has zero length, and a
+warp placed there would be a discontinuity between two observations recorded
+at the same \code{x}, which is not identified. The replicate counts become
+observation weights automatically, so no information is lost.
 }
 \examples{
 plot(faithful$eruptions, faithful$waiting)

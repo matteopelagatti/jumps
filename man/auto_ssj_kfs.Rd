@@ -9,11 +9,12 @@ auto_ssj_kfs(
   y,
   x,
   lambda,
+  weights = NULL,
   grid = seq(0, max(x) - min(x), length.out = 21L),
   ic = c("ebic", "bic", "hq", "aic", "aicc"),
   edf = TRUE,
   last_delta = 1,
-  ebic_xi = 1
+  ebic_xi = 0.15
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ auto_ssj_kfs(
 \item{x}{numeric vector with the covariate (no missing values allowed).}
 
 \item{lambda}{positive scalar with the smoothing parameter.}
+
+\item{weights}{optional numeric vector of positive observation weights,
+passed to the fitter; see its help page.}
 
 \item{grid}{numeric vector of \code{maxsum} values to search; the default is
 21 equally spaced values from 0 to the range of \code{x}.}
@@ -39,7 +43,10 @@ available.}
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]} passed to
 \code{\link{ssj_kfs}}: strength of the extended-BIC search penalty
-(default 1; only relevant when \code{ic = "ebic"}).}
+(default 0.15; only relevant when \code{ic = "ebic"}). See the
+"Choosing ebic_xi" section of \code{\link{ssj_kfs}} for how it was
+calibrated, and why it differs from the value used by
+\code{\link{auto_ssj_mle}}.}
 }
 \value{
 The output of the \code{\link{ssj_kfs}} function corresponding to
