@@ -25,8 +25,8 @@ The package provides three families of functions.
     and \code{\link{ssj_fix}}, together with their \code{auto_*} wrappers.
   \item \strong{Cubic smoothing splines with discontinuities (CSSD).} An
     implementation of the dynamic-programming algorithm of Storath and
-    Weinmann (2024): \code{\link{ssj_cssd_potts}},
-    \code{\link{auto_ssj_cssd}} and \code{\link{predict_cssd_potts}}, plus
+    Weinmann (2024): \code{\link{ssj_cssd_dp}},
+    \code{\link{auto_ssj_cssd}} and \code{\link{predict_cssd_dp}}, plus
     the faster piecewise-constant approximation \code{\link{ssj_cssd}}.
 }
 

@@ -9,6 +9,7 @@ auto_ssj_fix(
   y,
   x,
   lambda,
+  weights = NULL,
   grid = seq(0, sd(y, na.rm = TRUE)/mean(diff(x)) * 10, sd(y, na.rm =
     TRUE)/mean(diff(x))/10),
   ic = c("bic", "hq", "aic", "aicc"),
@@ -22,6 +23,9 @@ auto_ssj_fix(
 \item{x}{numeric vector with the covariate (no missing values allowed).}
 
 \item{lambda}{numeric scalar with the smoothing parameter.}
+
+\item{weights}{optional numeric vector of positive observation weights,
+passed to the fitter; see its help page.}
 
 \item{grid}{numeric vector containing the grid for the argument
 \code{maxsum} of the \code{\link{ssj_fix}} function.}

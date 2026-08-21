@@ -52,7 +52,7 @@ constant, with non-zero first differences at the detected jump locations.
 This implements the simplified total-variation (first-order) variant related
 to the CSSD framework of Storath and Weinmann (2024). The full CSSD
 (piecewise cubic smoothing spline with discontinuities) is implemented in
-\code{\link{ssj_cssd_potts}}; the total-variation formulation used here
+\code{\link{ssj_cssd_dp}}; the total-variation formulation used here
 replaces the \eqn{C^2} roughness penalty with an \eqn{\ell_1} penalty on
 first differences and is therefore much faster, at the cost of a piecewise
 constant (rather than piecewise cubic) fit.
@@ -78,5 +78,5 @@ signals. \emph{Journal of Computational and Graphical Statistics},
 \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 }
 \seealso{
-\code{\link{ssj_cssd_potts}} for the exact cubic CSSD.
+\code{\link{ssj_cssd_dp}} for the exact cubic CSSD.
 }

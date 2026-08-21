@@ -84,7 +84,7 @@ df |>
 # PASS SMOOTHING SPLINES WITH JUMPS
 library(jumps)
 ss1 <- auto_ssj_mle(y = dt$MWh, x = dt$Celsius,
-                    ic = "ebic", ebic_xi = 0.1)
+                    ic = "ebic", ebic_xi = 0.3)
 
 # BASIC PLOT
 plot(ss1$x, ss1$smoothed_level, type = "l",

@@ -9,10 +9,12 @@ ssj_mle(
   y,
   x,
   maxsum = max(x) - min(x),
+  weights = NULL,
+  ss_within = NULL,
   edf = TRUE,
   parinit = NULL,
   last_delta = 1,
-  ebic_xi = 1
+  ebic_xi = 0.3
 )
 }
 \arguments{
@@ -24,6 +26,37 @@ ssj_mle(
 \eqn{M} of the constraint \eqn{\sum_t \gamma_t \le M}. It is expressed in
 the units of \code{x} and defaults to the range of \code{x}, the same
 upper end as the grid searched by \code{\link{auto_ssj_mle}}.}
+
+\item{weights}{optional numeric vector of positive observation weights, one
+  per element of \code{y}. The observation variance becomes
+  \eqn{H_t = \lambda\sigma^2/w_t}, so a point carrying weight \eqn{w_t} is
+  treated as the mean of \eqn{w_t} independent observations. This is what
+  makes it correct to collapse tied values of \code{x} to their mean and
+  pass the number of replicates as the weight: the Gaussian likelihood
+  factorises, so the weighted fit on the collapsed data is identical to the
+  fit on the raw replicates. The default, \code{NULL}, means unit weights.
+
+  Note a caveat specific to this function, which estimates the noise level
+  rather than taking it as given. Collapsing replicates to their mean
+  discards the within-group scatter, and that scatter is exactly what
+  identifies the observation variance: on a test case with 150 observations
+  at 40 distinct sites the raw fit recovered a variance of 0.021 against a
+  true 0.0225, while the weighted collapsed fit returned 0.086. Pass the
+  discarded scatter through \code{ss_within} to restore it; the estimates
+  then agree with the raw ones to four or five significant digits. At a
+  \emph{fixed} smoothing parameter the discarded term does not involve
+  \eqn{f} at all, which is why \code{\link{ssj_kfs}},
+  \code{\link{ssj_fix}} and \code{\link{ssj_atw}} reproduce the raw fit
+  without it.}
+
+\item{ss_within}{optional pooled within-group sum of squares discarded when
+replicates were collapsed to their means, that is
+\eqn{\sum_i\sum_j (y_{ij}-\bar y_i)^2}. Supplying it, together with the
+replicate counts in \code{weights}, restores the term of the likelihood
+that the collapsing removed, so the estimates are those that the raw
+replicates would have produced. It has no effect on the fit at a fixed
+smoothing parameter; what it restores is the information identifying the
+observation variance, and hence \code{lambda}.}
 
 \item{edf}{logical: if \code{TRUE} (default) the effective degrees of freedom
 are computed as the trace of the hat matrix; if \code{FALSE} the non-zero
@@ -38,8 +71,8 @@ observation (it does not affect the fit; default 1).}
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]}: strength of the extended-BIC
 penalty for searching over the \code{n-1} candidate jump locations
-(default 1, the Chen and Chen (2008) recommendation for sparse selection;
-0 reduces \code{ebic} to plain \code{bic}).}
+(default 0.3; 0 reduces \code{ebic} to plain \code{bic}). The default is
+calibrated rather than taken from theory; see the note below.}
 }
 \value{
 An object of class \code{ssj} (a list, so that all the slots below
@@ -50,7 +83,12 @@ An object of class \code{ssj} (a list, so that all the slots below
  \item \code{nobs}: number of observations.
  \item \code{df}: model's degrees of freedom.
  \item \code{maxsum}: the \code{maxsum} argument.
- \item \code{loglik}: Gaussian log-likelihood at the optimum.
+ \item \code{loglik}: Gaussian log-likelihood at the optimum, on the scale
+   of \code{y} as supplied. Note that the diffuse initial conditions are
+   approximated by a large proper prior, so the absolute value carries an
+   additive constant set by that convention; differences across
+   \code{maxsum} for one data set, which is what the information criteria
+   compare, are unaffected.
  \item \code{pars}: named vector (sigma, lambda); \code{lambda} is estimated.
  \item \code{gamma}: estimated time-warp vector of length \code{n-1}.
  \item \code{ic}: vector of information criteria (aic, aicc, bic, hq, ebic).
@@ -90,7 +128,43 @@ the eventual optimum. Rather than relying on a single formula,
 \code{ssj_mle} therefore tries a fixed grid of starting values for
 \code{lambda} spanning several orders of magnitude and keeps whichever
 converges to the highest likelihood.
+
+
+Tied values of \code{x} are collapsed to their weighted mean before fitting,
+and the fitted values are returned at the vector of unique, sorted \code{x}
+available in the \code{x} slot of the output. This keeps the problem well
+posed: with ties the interval between two replicates has zero length, and a
+warp placed there would be a discontinuity between two observations recorded
+at the same \code{x}, which is not identified. The replicate counts become
+observation weights automatically, so no information is lost.
 }
+\section{Choosing \code{ebic_xi}}{
+
+The default is the value that minimises worst-case regret in root mean
+squared error over a factorial design of 48 cells -- four sample sizes,
+three noise levels and four counts of discontinuities, 17,400 replications
+in all. The experiment is shipped as \code{inst/scripts/xi_calibration.R}.
+For this estimator the optimum is flat in \eqn{n}, at 0.27 to 0.33, so a
+constant is appropriate; \code{\link{ssj_kfs}} and \code{\link{ssj_atw}}
+were calibrated separately and carry different defaults, because they are
+different procedures even where they fit the same model.
+
+The value sits below the Chen and Chen (2008) consistency floor of about
+0.5 for \eqn{p = n-1} candidates, and that is not an oversight. Their
+derivation assumes the base penalty charges only for dimension, with the
+whole cost of searching the model space carried by the \eqn{\xi} term. Here
+part of it is already paid: \code{df} is the trace of the smoothing matrix
+and grows with each activated warp, so the plain BIC term levies about
+\eqn{0.16\log n} per declared jump before the extended term adds anything.
+Expressed on the \eqn{\xi} scale that implicit charge is roughly 0.08.
+
+Detection accuracy cannot be used to calibrate \eqn{\xi} on this problem:
+with \eqn{n-1} candidates and a handful of true discontinuities the
+negative class dominates, and both balanced accuracy and the Matthews
+coefficient give optima that wander across the design. Larger values
+declare fewer jumps if that is what a particular application needs.
+}
+
 \examples{
 # 'maxsum' is a warping budget in the units of x; the range of eruptions
 # is about 3.5, so a budget of 1 is already generous.

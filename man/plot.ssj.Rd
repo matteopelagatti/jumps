@@ -15,6 +15,7 @@
   ylab = NULL,
   col_fit = "firebrick",
   col_data = "steelblue",
+  use_ggplot = TRUE,
   ...
 )
 }
@@ -39,11 +40,27 @@ estimated domain warps is added, when the estimator provides them.}
 
 \item{col_fit, col_data}{colours of the fitted curve and of the observations.}
 
+\item{use_ggplot}{logical: if \code{TRUE} (the default, as in
+  \code{\link{plot.hpj}}) the figure is built with \pkg{ggplot2} and
+  \emph{returned} rather than drawn, so it can be further modified, themed,
+  saved with \code{ggplot2::ggsave} or combined with other plots. Set it to
+  \code{FALSE} for base graphics, which draws directly and returns
+  \code{NULL}. If \pkg{ggplot2} is not installed the argument is ignored
+  with a warning and base graphics are used.
+
+  Note the consequence for scripts: with the default the plot is a value, so
+  at the top level of a script or inside a loop it must be \code{print}ed to
+  appear, exactly as any \pkg{ggplot2} figure must.}
+
 \item{...}{further arguments passed to \code{\link{ssj_breaks}}, such as
 \code{thresh}, \code{frac_total} or \code{frac_delta}.}
 }
 \value{
-\code{NULL}, invisibly. Called for its side effect of drawing.
+With the default \code{use_ggplot = TRUE}, a \code{ggplot} object;
+  the fitted curve and the warp profile are facets of a single plot rather
+  than two separate figures, so that one value is returned and the two x axes
+  stay aligned. With \code{use_ggplot = FALSE}, \code{NULL} invisibly, the
+  function being called for its side effect of drawing.
 }
 \description{
 Draws the observed data with the fitted smoothing spline with jumps and,
@@ -66,6 +83,14 @@ plot(fit, main = "Old Faithful", xlab = "eruption length",
 
 # a single absolute threshold on the warps, as in Section 4.2 of the paper
 plot(fit, thresh = 1)
+
+# the default returns a ggplot object, so it can be extended
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  plot(fit) + ggplot2::labs(title = "Old Faithful")
+}
+
+# base graphics instead
+plot(fit, use_ggplot = FALSE)
 
 }
 \references{

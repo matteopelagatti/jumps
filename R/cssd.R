@@ -10,7 +10,7 @@
 #' This implements the simplified total-variation (first-order) variant related
 #' to the CSSD framework of Storath and Weinmann (2024). The full CSSD
 #' (piecewise cubic smoothing spline with discontinuities) is implemented in
-#' \code{\link{ssj_cssd_potts}}; the total-variation formulation used here
+#' \code{\link{ssj_cssd_dp}}; the total-variation formulation used here
 #' replaces the \eqn{C^2} roughness penalty with an \eqn{\ell_1} penalty on
 #' first differences and is therefore much faster, at the cost of a piecewise
 #' constant (rather than piecewise cubic) fit.
@@ -54,7 +54,7 @@
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 #'
-#' @seealso \code{\link{ssj_cssd_potts}} for the exact cubic CSSD.
+#' @seealso \code{\link{ssj_cssd_dp}} for the exact cubic CSSD.
 #'
 #' @examples
 #' set.seed(1)
@@ -159,19 +159,19 @@ ssj_cssd <- function(y, x = NULL, lambda, max_iter = 100L, rho = 1.0) {
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 #'
-#' @seealso \code{\link{auto_ssj_cssd}}, \code{\link{predict_cssd_potts}},
+#' @seealso \code{\link{auto_ssj_cssd}}, \code{\link{predict_cssd_dp}},
 #'   \code{\link{ssj_cssd}}.
 #'
 #' @examples
 #' set.seed(1)
 #' x   <- sort(runif(100))
 #' y   <- sin(4 * pi * x) + c(rep(0, 50), rep(1, 50)) + rnorm(100, sd = 0.1)
-#' fit <- ssj_cssd_potts(y, x, p = 0.999, gamma = 4)
+#' fit <- ssj_cssd_dp(y, x, p = 0.999, gamma = 4)
 #' plot(x, y)
 #' lines(fit$x, fit$smoothed_level, col = "darkgreen", lwd = 2)
 #'
 #' @export
-ssj_cssd_potts <- function(y, x = NULL, p = 0.999, gamma = 1, delta = 1) {
+ssj_cssd_dp <- function(y, x = NULL, p = 0.999, gamma = 1, delta = 1) {
   y <- as.numeric(y)
   n <- length(y)
 
@@ -201,7 +201,7 @@ ssj_cssd_potts <- function(y, x = NULL, p = 0.999, gamma = 1, delta = 1) {
 
   delta <- rep(as.numeric(delta), length.out = n)
 
-  raw <- cssd_potts(y, x, p = p, gamma = gamma, delta_in = delta)
+  raw <- cssd_dp(y, x, p = p, gamma = gamma, delta_in = delta)
 
   res <- list(
     smoothed_level = raw$f_hat,
@@ -221,34 +221,34 @@ ssj_cssd_potts <- function(y, x = NULL, p = 0.999, gamma = 1, delta = 1) {
 #' Predict from a fitted CSSD at new locations
 #'
 #' Evaluates the piecewise cubic spline returned by
-#' \code{\link{ssj_cssd_potts}} at arbitrary query points. Query points outside
+#' \code{\link{ssj_cssd_dp}} at arbitrary query points. Query points outside
 #' the range of the data are extrapolated by the cubic polynomial of the
 #' nearest segment.
 #'
-#' @param fit object returned by \code{\link{ssj_cssd_potts}}.
+#' @param fit object returned by \code{\link{ssj_cssd_dp}}.
 #' @param xnew numeric vector of query locations (it need not be sorted).
 #' @param y_orig,x_orig original data vectors, needed to re-fit the Hermite
 #'   control points on each segment. If \code{NULL} (default), the sorted data
-#'   stored in \code{fit} by \code{\link{ssj_cssd_potts}} are used.
+#'   stored in \code{fit} by \code{\link{ssj_cssd_dp}} are used.
 #' @param delta positive scalar or vector with the noise standard deviations
 #'   (the same as those used to obtain \code{fit}). If \code{NULL} (default),
 #'   the value stored in \code{fit} is used.
 #'
 #' @returns Numeric vector of fitted values, in the same order as \code{xnew}.
 #'
-#' @seealso \code{\link{ssj_cssd_potts}}.
+#' @seealso \code{\link{ssj_cssd_dp}}.
 #'
 #' @examples
 #' set.seed(1)
 #' x    <- sort(runif(100))
 #' y    <- sin(4 * pi * x) + c(rep(0, 50), rep(1, 50)) + rnorm(100, sd = 0.1)
-#' fit  <- ssj_cssd_potts(y, x, p = 0.999, gamma = 4)
+#' fit  <- ssj_cssd_dp(y, x, p = 0.999, gamma = 4)
 #' xnew <- seq(0, 1, length.out = 200)
 #' plot(x, y)
-#' lines(xnew, predict_cssd_potts(fit, xnew), col = "darkgreen", lwd = 2)
+#' lines(xnew, predict_cssd_dp(fit, xnew), col = "darkgreen", lwd = 2)
 #'
 #' @export
-predict_cssd_potts <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
+predict_cssd_dp <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
                                delta = NULL) {
   if (is.null(x_orig)) x_orig <- fit$x
   if (is.null(y_orig)) y_orig <- fit$y
@@ -267,11 +267,11 @@ predict_cssd_potts <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
   xnew   <- as.numeric(xnew)
   q_ord  <- order(xnew)
   fitted <- as.numeric(
-    cssd_potts_predict(y_s, x_s, fit$smoothed_level,
+    cssd_dp_predict(y_s, x_s, fit$smoothed_level,
                        fit$disc_locs, xnew[q_ord],
                        fit$p, delta)
   )
-  # cssd_potts_predict() requires sorted query points; restore the input order
+  # cssd_dp_predict() requires sorted query points; restore the input order
   out <- numeric(length(xnew))
   out[q_ord] <- fitted
   out
@@ -304,7 +304,7 @@ predict_cssd_potts <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
 #' @param gamma_init initial jump penalty (default 1, as in the paper).
 #' @param maxit_nm maximum number of Nelder-Mead iterations (default 200).
 #'
-#' @returns The output of \code{\link{ssj_cssd_potts}} at the cross-validated
+#' @returns The output of \code{\link{ssj_cssd_dp}} at the cross-validated
 #'   optimal \eqn{(p,\gamma)}, with two extra slots:
 #' \itemize{
 #'   \item \code{cv_score}: the minimised cross-validation score.
@@ -317,7 +317,7 @@ predict_cssd_potts <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 #'
-#' @seealso \code{\link{ssj_cssd_potts}}, \code{\link{predict_cssd_potts}}.
+#' @seealso \code{\link{ssj_cssd_dp}}, \code{\link{predict_cssd_dp}}.
 #'
 #' @examples
 #' set.seed(1)
@@ -369,13 +369,13 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
       te <- which(fold_id == fold)
       if (length(tr) < 3L || length(te) == 0L) next
       fit_tr <- tryCatch(
-        cssd_potts(y[tr], x[tr], p = p_try, gamma = gam_try,
+        cssd_dp(y[tr], x[tr], p = p_try, gamma = gam_try,
                    delta_in = delta[tr]),
         error = function(e) NULL
       )
       if (is.null(fit_tr)) return(1e12)
       pred <- as.numeric(
-        cssd_potts_predict(y[tr], x[tr], fit_tr$f_hat,
+        cssd_dp_predict(y[tr], x[tr], fit_tr$f_hat,
                            fit_tr$disc_locs, x[te],
                            p_try, delta[tr])
       )
@@ -412,7 +412,7 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
   q_opt   <- 1 / (1 + exp(-opt$par[2]))
   gam_opt <- p_opt * q_opt / (1 - q_opt)
 
-  fit <- ssj_cssd_potts(y, x, p = p_opt, gamma = gam_opt, delta = delta)
+  fit <- ssj_cssd_dp(y, x, p = p_opt, gamma = gam_opt, delta = delta)
   fit$cv_score <- opt$value
   fit$cv_par   <- c(p = p_opt, gamma = gam_opt)
   fit$call     <- match.call()

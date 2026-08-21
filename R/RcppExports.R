@@ -35,9 +35,13 @@
 #'   \item{ebic}{Extended BIC, penalizing the search over n-1 candidate jump
 #'     locations on top of the usual bic (see ebic_xi).}
 #' }
+#' @param w_in numeric vector of n positive observation weights.  The data
+#'   term becomes sum_i w_i (y_i - f_i)^2, so a point with weight w_i counts as
+#'   the mean of w_i independent observations.  Pass a vector of ones for the
+#'   unweighted problem.
 #' @noRd
-solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol = 1e-4, learning_rate = 0.1, gamma_init = numeric(0), ebic_xi = 1.0) {
-    .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi)
+solve_jump_spline_fast <- function(x_in, y_in, lambda, M, max_iter = 100L, tol = 1e-4, learning_rate = 0.1, gamma_init = numeric(0), ebic_xi = 1.0, w_in = numeric(0)) {
+    .Call(`_jumps_solve_jump_spline_fast`, x_in, y_in, lambda, M, max_iter, tol, learning_rate, gamma_init, ebic_xi, w_in)
 }
 
 #' ADMM solver for total-variation denoising with irregular sampling
@@ -61,12 +65,12 @@ cssd_irregular_eigen <- function(y_in, x_in, lambda, max_iter = 100L, rho = 1.0)
     .Call(`_jumps_cssd_irregular_eigen`, y_in, x_in, lambda, max_iter, rho)
 }
 
-cssd_potts <- function(y_in, x_in, p, gamma, delta_in) {
-    .Call(`_jumps_cssd_potts`, y_in, x_in, p, gamma, delta_in)
+cssd_dp <- function(y_in, x_in, p, gamma, delta_in) {
+    .Call(`_jumps_cssd_dp`, y_in, x_in, p, gamma, delta_in)
 }
 
-cssd_potts_predict <- function(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in) {
-    .Call(`_jumps_cssd_potts_predict`, y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in)
+cssd_dp_predict <- function(y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in) {
+    .Call(`_jumps_cssd_dp_predict`, y_in, x_in, f_hat_in, disc_locs_in, xq_in, p, delta_in)
 }
 
 #' Internal function for computing scores w/r to regression coefficients
@@ -153,9 +157,12 @@ da <- function(k1, k2, X, A1, A2) {
 #' values are arbitrary and will be overwritten;
 #' @param d vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 #' values are arbitrary and will be overwritten;
-#' @param w_ NULL (default) or vector of n weights for the effect of observation y_t
-#' on the estimation of the hp filter (with jumps) at time t;
-#' values are arbitrary and will be overwritten;
+#' @param w_ NULL (default) or vector of n weights, where element t is the
+#' weight of observation y_t on the smoothed signal at time t, that is the
+#' t-th diagonal element of the smoothing (hat) matrix, computed with the
+#' recursion of Koopman and Harvey (2003); their sum is the effective degrees
+#' of freedom. A missing y_t receives weight zero. Values are arbitrary on
+#' entry and will be overwritten;
 #' @return The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part
 #' that can be added if needed.
 #' @export

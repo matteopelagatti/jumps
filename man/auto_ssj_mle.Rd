@@ -8,17 +8,25 @@ using maximum-likelihood estimation}
 auto_ssj_mle(
   y,
   x,
+  weights = NULL,
+  ss_within = NULL,
   grid = seq(0, max(x) - min(x), length.out = 21L),
   ic = c("ebic", "bic", "hq", "aic", "aicc"),
   edf = TRUE,
   last_delta = 1,
-  ebic_xi = 1
+  ebic_xi = 0.3
 )
 }
 \arguments{
 \item{y}{numeric vector with the response (missing values allowed).}
 
 \item{x}{numeric vector with the covariate (no missing values allowed).}
+
+\item{weights}{optional numeric vector of positive observation weights,
+passed to the fitter; see its help page.}
+
+\item{ss_within}{optional pooled within-group sum of squares, passed to
+\code{\link{ssj_mle}}; see its help page.}
 
 \item{grid}{numeric vector of \code{maxsum} values to search; the default is
 21 equally spaced values from 0 to the range of \code{x}.}
@@ -36,7 +44,9 @@ available.}
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]} passed to
 \code{\link{ssj_mle}}: strength of the extended-BIC search penalty
-(default 1; only relevant when \code{ic = "ebic"}).}
+(default 0.3; only relevant when \code{ic = "ebic"}). See the
+"Choosing ebic_xi" section of \code{\link{ssj_mle}} for how it was
+calibrated.}
 }
 \value{
 The output of the \code{\link{ssj_mle}} function corresponding to

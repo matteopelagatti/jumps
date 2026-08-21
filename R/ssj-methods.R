@@ -25,6 +25,71 @@ ssj_is_warp <- function(object) {
   object$method %in% c("mle", "kfs", "atw")
 }
 
+# Validate and recycle observation weights.  Returns a numeric vector of
+# length n; NULL means unit weights.  Weights are interpreted as counts of
+# independent observations, so the observation variance is divided by them.
+ssj_check_weights <- function(weights, n) {
+  if (is.null(weights)) return(rep(1, n))
+  w <- as.numeric(weights)
+  if (length(w) == 1L) w <- rep(w, n)
+  if (length(w) != n) stop("'weights' must have the same length as 'y'")
+  if (anyNA(w) || any(!is.finite(w)) || any(w <= 0))
+    stop("'weights' must be positive and finite")
+  w
+}
+
+# Collapse tied values of x to their weighted mean.
+#
+# The Gaussian likelihood factorises as
+#   sum_j w_ij (y_ij - f_i)^2 = sw_i (ybar_i - f_i)^2 + SS_i,
+# so the group mean, carrying the summed weight, is a sufficient statistic for
+# f.  The leftover SS_i does not involve f -- it is returned separately because
+# it is exactly what identifies the observation variance, and a function that
+# estimates that variance has to put it back into the likelihood.
+#
+# Returns the collapsed data plus the pooled within-group sum of squares and
+# the number of observations it was computed from (its degrees of freedom).
+ssj_collapse_ties <- function(y, x, wt) {
+  if (!anyDuplicated(x))
+    return(list(y = y, x = x, wt = wt, ss_within = 0, df_within = 0,
+                collapsed = FALSE))
+  grp <- cumsum(c(TRUE, diff(x) != 0))
+  ok  <- !is.na(y)
+  sw  <- as.numeric(tapply(ifelse(ok, wt, 0),     grp, sum))   # weight of the
+  sy  <- as.numeric(tapply(ifelse(ok, wt*y, 0),   grp, sum))   # observed part
+  ybar <- ifelse(sw > 0, sy / sw, NA_real_)
+  ss   <- if (any(ok)) sum(wt[ok] * (y[ok] - ybar[grp[ok]])^2) else 0
+  # a group with no observed value keeps a placeholder weight: y is NA there,
+  # so the filter skips the update and the value is never used
+  list(y  = ybar,
+       x  = x[!duplicated(x)],
+       wt = ifelse(sw > 0, sw, 1),
+       ss_within = ss,
+       df_within = sum(ok) - sum(sw > 0),
+       collapsed = TRUE)
+}
+
+# Validate the length of a user-supplied vector of starting values.
+#
+# Call it AFTER ssj_collapse_ties(): the expected length is driven by the number
+# of DISTINCT values of x, which with ties is not length(y), so a caller has no
+# easy way of getting it right by inspection.  Without the check a wrong-length
+# parinit reaches nloptr as an x0 that recycling has padded with NA, and the
+# failure surfaces as the unhelpful "x0 contains NA".
+#
+# `layout` spells out what the vector holds, `n` and `collapsed` explain where
+# the expected length comes from.
+ssj_check_parinit <- function(parinit, expected, layout, n, collapsed) {
+  if (is.null(parinit) || length(parinit) == expected) return(invisible(NULL))
+  stop("'parinit' must have length ", expected, ", not ", length(parinit),
+       ": it holds ", layout, ".  Here n = ", n,
+       if (collapsed)
+         paste0(", the number of distinct values of 'x' after tied values were",
+                " collapsed to their weighted mean, not length(y)")
+       else ", the number of observations",
+       ".", call. = FALSE)
+}
+
 # Internal constructor.  It never drops or renames anything already present in
 # `out`, so code written against the plain lists returned by earlier versions
 # keeps working; it only adds the class and a few derived fields.
@@ -262,10 +327,25 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #' @param main title of the plot; the default, \code{NULL}, draws no title.
 #' @param xlab,ylab axis labels; if \code{NULL} defaults are used.
 #' @param col_fit,col_data colours of the fitted curve and of the observations.
+#' @param use_ggplot logical: if \code{TRUE} (the default, as in
+#'   \code{\link{plot.hpj}}) the figure is built with \pkg{ggplot2} and
+#'   \emph{returned} rather than drawn, so it can be further modified, themed,
+#'   saved with \code{ggplot2::ggsave} or combined with other plots. Set it to
+#'   \code{FALSE} for base graphics, which draws directly and returns
+#'   \code{NULL}. If \pkg{ggplot2} is not installed the argument is ignored
+#'   with a warning and base graphics are used.
+#'
+#'   Note the consequence for scripts: with the default the plot is a value, so
+#'   at the top level of a script or inside a loop it must be \code{print}ed to
+#'   appear, exactly as any \pkg{ggplot2} figure must.
 #' @param ... further arguments passed to \code{\link{ssj_breaks}}, such as
 #'   \code{thresh}, \code{frac_total} or \code{frac_delta}.
 #'
-#' @returns \code{NULL}, invisibly. Called for its side effect of drawing.
+#' @returns With the default \code{use_ggplot = TRUE}, a \code{ggplot} object;
+#'   the fitted curve and the warp profile are facets of a single plot rather
+#'   than two separate figures, so that one value is returned and the two x axes
+#'   stay aligned. With \code{use_ggplot = FALSE}, \code{NULL} invisibly, the
+#'   function being called for its side effect of drawing.
 #'
 #' @references
 #' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. (2026). Smoothing
@@ -287,14 +367,28 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #' # a single absolute threshold on the warps, as in Section 4.2 of the paper
 #' plot(fit, thresh = 1)
 #'
+#' # the default returns a ggplot object, so it can be extended
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   plot(fit) + ggplot2::labs(title = "Old Faithful")
+#' }
+#'
+#' # base graphics instead
+#' plot(fit, use_ggplot = FALSE)
+#'
 #' @export
 plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
                      show_warp = TRUE, main = NULL, xlab = NULL, ylab = NULL,
-                     col_fit = "firebrick", col_data = "steelblue", ...) {
+                     col_fit = "firebrick", col_data = "steelblue",
+                     use_ggplot = TRUE, ...) {
   obj <- x
   xx  <- obj$x
   yy  <- obj$y
   fit <- obj$smoothed_level
+
+  if (use_ggplot && !requireNamespace("ggplot2", quietly = TRUE)) {
+    warning("package 'ggplot2' is not installed: falling back to base graphics")
+    use_ggplot <- FALSE
+  }
 
   br      <- ssj_breaks(obj, ...)
   has_warp <- (ssj_is_warp(obj) || identical(obj$method, "fix")) &&
@@ -306,6 +400,79 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
   if (is.null(xlab)) xlab <- "x"
   if (is.null(ylab)) ylab <- "y"
 
+  # Confidence band, needed by both drawing paths, so computed before they
+  # part.  It stays NULL when no coverage was asked for, or when the
+  # estimator returns no pointwise variances (ssj_atw does not).
+  band <- NULL
+  if (!is.null(prob) && !is.null(obj$var_smoothed_level)) {
+    z    <- abs(qnorm((1 - prob)/2))
+    se   <- sqrt(pmax(obj$var_smoothed_level, 0))
+    band <- list(lo = fit - z*se, up = fit + z*se)
+  }
+
+  # ---- ggplot2 branch ----------------------------------------------------
+  # The two panels become facets of one plot rather than two objects, so that a
+  # single value is returned and the x axes stay aligned.  Each layer is given
+  # its own data frame carrying the facet key, which is how geoms that differ
+  # between panels are combined without an extra package.
+  if (use_ggplot) {
+    key <- c("fit", "warp")
+    lab_warp <- if (ssj_is_warp(obj)) "Domain warp" else "Additional s.d."
+    lvl <- if (panel2) c(ylab_fit = ylab, w = lab_warp) else ylab
+    mkp <- function(d, which) {
+      d$panel <- factor(if (which == 1L) ylab else lab_warp,
+                        levels = if (panel2) c(ylab, lab_warp) else ylab)
+      d
+    }
+    gg <- ggplot2::ggplot() + ggplot2::theme_bw()
+
+    if (!is.null(band))
+      gg <- gg + ggplot2::geom_ribbon(
+        data = mkp(data.frame(x = xx, lo = band$lo, up = band$up), 1L),
+        ggplot2::aes(x = .data$x, ymin = .data$lo, ymax = .data$up),
+        fill = col_fit, alpha = 0.20)
+
+    if (isTRUE(show_breaks) && nrow(br) > 0L)
+      gg <- gg + ggplot2::geom_vline(xintercept = br$x, linetype = "dashed",
+                                     colour = "grey40")
+
+    if (!is.null(yy))
+      gg <- gg + ggplot2::geom_point(
+        data = mkp(data.frame(x = xx, y = as.numeric(yy)), 1L),
+        ggplot2::aes(x = .data$x, y = .data$y),
+        colour = col_data, alpha = 0.35, size = 1)
+
+    gg <- gg + ggplot2::geom_line(
+      data = mkp(data.frame(x = xx, y = fit), 1L),
+      ggplot2::aes(x = .data$x, y = .data$y), colour = col_fit, linewidth = 0.8)
+
+    if (panel2) {
+      g <- if (ssj_is_warp(obj)) as.numeric(obj$gamma) else as.numeric(obj$sigmas)[-1L]
+      g[!is.finite(g)] <- 0
+      gg <- gg + ggplot2::geom_segment(
+        data = mkp(data.frame(x = xx[-1L], g = g), 2L),
+        ggplot2::aes(x = .data$x, xend = .data$x, y = 0, yend = .data$g),
+        colour = "grey70")
+      if (isTRUE(show_breaks) && nrow(br) > 0L) {
+        gg <- gg + ggplot2::geom_segment(
+          data = mkp(data.frame(x = br$x, g = br$warp), 2L),
+          ggplot2::aes(x = .data$x, xend = .data$x, y = 0, yend = .data$g),
+          colour = col_fit, linewidth = 0.8) +
+          ggplot2::geom_point(
+            data = mkp(data.frame(x = br$x, g = br$warp), 2L),
+            ggplot2::aes(x = .data$x, y = .data$g), colour = col_fit, size = 1.4)
+      }
+      gg <- gg + ggplot2::facet_grid(rows = ggplot2::vars(.data$panel),
+                                     scales = "free_y", switch = "y") +
+        ggplot2::theme(strip.placement = "outside",
+                       strip.background = ggplot2::element_blank())
+    }
+    gg <- gg + ggplot2::labs(x = xlab, y = if (panel2) NULL else ylab,
+                             title = main)
+    return(gg)
+  }
+
+  # ---- base graphics -----------------------------------------------------
   op <- par(no.readonly = TRUE)
   on.exit(par(op), add = TRUE)
 
@@ -316,12 +483,6 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
   }
 
   # ---- upper panel: data, fitted curve, declared discontinuities ----------
-  band <- NULL
-  if (!is.null(prob) && !is.null(obj$var_smoothed_level)) {
-    z    <- abs(qnorm((1 - prob)/2))
-    se   <- sqrt(pmax(obj$var_smoothed_level, 0))
-    band <- list(lo = fit - z*se, up = fit + z*se)
-  }
   ylim <- range(c(yy, fit, band$lo, band$up), na.rm = TRUE)
 
   plot(xx, if (is.null(yy)) fit else yy, type = "n", ylim = ylim,
@@ -359,4 +520,111 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
   }
 
   invisible(NULL)
+}
+
+
+#' Predict from a smoothing spline with jumps
+#'
+#' Evaluates a fitted \code{ssj} object at arbitrary locations. For the
+#' domain-warping estimators this is the cubic the model actually implies, not
+#' an interpolation of the fitted values.
+#'
+#' The state of the warping model is the pair \eqn{(f, df/ds)} at every sampling
+#' site, where \eqn{s} is the latent (warped) coordinate. Between two sites the
+#' fitted function is therefore a cubic in \eqn{s}, and since \eqn{s} is a
+#' linear dilation of \eqn{x} on each interval, it is a cubic in \eqn{x} as
+#' well. Cubic Hermite interpolation with the stored levels and slopes
+#' reproduces it exactly. On an interval carrying a large warp the same cubic is
+#' traversed over a short physical distance, which is what makes the transition
+#' look like a jump; a linear interpolation of the fitted values would cut that
+#' corner, and a natural cubic spline through the fitted values alone would
+#' smooth it away.
+#'
+#' Outside the range of the data the fit is extended linearly from the end knot,
+#' rather than by extrapolating the end cubic.
+#'
+#' For an object produced by \code{\link{ssj_cssd_dp}} the call is passed to
+#' \code{\link{predict_cssd_dp}}; for one produced by \code{\link{ssj_cssd}},
+#' whose fit is piecewise constant by construction, a step interpolation is used.
+#'
+#' @param object an object of class \code{ssj}.
+#' @param xnew numeric vector of locations at which to evaluate the fit; if
+#'   \code{NULL} (default), the fitted values at the sampling sites are
+#'   returned.
+#' @param ... passed to \code{\link{predict_cssd_dp}} for CSSD objects,
+#'   otherwise ignored.
+#'
+#' @returns Numeric vector of fitted values, in the same order as \code{xnew}.
+#'
+#' @seealso \code{\link{plot.ssj}}, \code{\link{ssj_breaks}}.
+#'
+#' @examples
+#' set.seed(2026)
+#' x <- sort(runif(80))
+#' y <- sin(4*pi*x) + (x > 0.5) + rnorm(80, sd = 0.1)
+#' # a short grid keeps the example quick; the default 21-point one is finer
+#' fit <- auto_ssj_mle(y, x, ic = "ebic", ebic_xi = 0.1,
+#'                     grid = seq(0, 1, length.out = 9))
+#'
+#' xg <- seq(0, 1, length.out = 400)
+#' plot(x, y, pch = 16, cex = 0.6, col = "grey60")
+#' lines(xg, predict(fit, xg), col = "firebrick", lwd = 2)
+#'
+#' # the cubic keeps the transition sharp where a linear interpolation of the
+#' # fitted values would cut the corner
+#' lines(fit$x, fit$smoothed_level, col = "steelblue", lty = 2)
+#'
+#' @export
+predict.ssj <- function(object, xnew = NULL, ...) {
+  if (is.null(xnew)) return(object$smoothed_level)
+  xnew <- as.numeric(xnew)
+
+  if (identical(object$method, "cssd"))
+    return(predict_cssd_dp(object, xnew, ...))
+
+  if (identical(object$method, "cssd_tv")) {
+    # the total-variation fit is piecewise constant by construction
+    return(stats::approx(object$x, object$smoothed_level, xout = xnew,
+                         method = "constant", rule = 2L)$y)
+  }
+
+  xx <- object$x
+  f  <- object$smoothed_level
+  fp <- object$smoothed_slope
+  n  <- length(xx)
+  if (is.null(fp)) {
+    warning("this fit carries no 'smoothed_slope': falling back to linear ",
+            "interpolation. Re-fit with the current version for the cubic.")
+    return(stats::approx(xx, f, xout = xnew, rule = 2L)$y)
+  }
+  if (n < 2L) return(rep(f[1L], length(xnew)))
+
+  delta <- diff(xx)
+  # tau = delta + gamma is the latent length of each interval; ssj_fix warps the
+  # disturbance variances rather than the domain, so there tau = delta.
+  gam <- if (ssj_is_warp(object)) as.numeric(object$gamma) else numeric(n - 1L)
+  if (length(gam) != n - 1L) gam <- numeric(n - 1L)
+  tau <- delta + gam
+
+  i <- findInterval(xnew, xx, rightmost.closed = TRUE, all.inside = TRUE)
+  u <- (xnew - xx[i]) / delta[i]          # 0..1 within the interval
+
+  # cubic Hermite on [0, 1], with the tangents expressed over the LATENT length
+  h00 <-  2*u^3 - 3*u^2 + 1
+  h10 <-    u^3 - 2*u^2 + u
+  h01 <- -2*u^3 + 3*u^2
+  h11 <-    u^3 -   u^2
+  out <- h00*f[i] + h10*tau[i]*fp[i] + h01*f[i + 1L] + h11*tau[i]*fp[i + 1L]
+
+  # Linear extension beyond the data.  The slope is the bare latent slope, NOT
+  # the physical slope just inside the end interval: the warps gamma live
+  # strictly between observations, so outside the sample there is no fictitious
+  # domain and the dilation is 1.  Using the inside slope would multiply it by
+  # tau/delta, which on a boundary interval carrying a warp can be a factor of
+  # tens and sends the extrapolation to absurd values within a short distance.
+  lo <- xnew < xx[1L]
+  hi <- xnew > xx[n]
+  if (any(lo)) out[lo] <- f[1L] + fp[1L] * (xnew[lo] - xx[1L])
+  if (any(hi)) out[hi] <- f[n]  + fp[n]  * (xnew[hi] - xx[n])
+  out
 }

@@ -10,11 +10,12 @@ ssj_atw(
   x,
   lambda,
   maxsum = max(x) - min(x),
+  weights = NULL,
   max_iter = 100,
   tol = 1e-04,
   learning_rate = 0.1,
   gamma_init = numeric(0),
-  ebic_xi = 0.3
+  ebic_xi = 0.25
 )
 }
 \arguments{
@@ -29,6 +30,14 @@ ssj_atw(
 the units of \code{x} and defaults to the range of \code{x}, the same
 upper end as the grid searched by \code{\link{auto_ssj_atw}}.}
 
+\item{weights}{optional numeric vector of positive observation weights, one
+per element of \code{y}. The data term becomes
+\eqn{\sum_i w_i (y_i - f_i)^2}, so a point with weight \eqn{w_i} counts as
+the mean of \eqn{w_i} independent observations, and the information
+criteria use \eqn{\sum_i w_i} in place of the number of design points.
+Weights are averaged along with \code{y} when tied values of \code{x} are
+collapsed. The default, \code{NULL}, means unit weights.}
+
 \item{max_iter}{maximum number of iterations (default 100).}
 
 \item{tol}{tolerance for numerical convergence (default 1e-4).}
@@ -42,13 +51,8 @@ warm start for \eqn{\gamma}; ignored when its length does not match
 
 \item{ebic_xi}{numeric scalar in \code{[0,1]}: strength of the extended-BIC
 penalty for searching over the \code{n-1} candidate jump locations
-(default 0.3; 0 reduces \code{ebic} to plain \code{bic}). The default is
-lower than the Chen and Chen (2008) value of 1 used by
-\code{\link{ssj_mle}} and \code{\link{ssj_kfs}}, because those maximise
-the exact Gaussian likelihood whereas the alternating algorithm evaluates
-it at the unbiased residual variance \eqn{\sigma^2 = rss/(n - edf)}: the
-two log-likelihoods are on different scales, so the penalty that delivers
-comparable sparsity differs.}
+(default 0.25; 0 reduces \code{ebic} to plain \code{bic}). The default is
+calibrated rather than taken from theory; see the note below.}
 }
 \value{
 An object of class \code{ssj} (a list, so that all the slots below
@@ -58,8 +62,13 @@ An object of class \code{ssj} (a list, so that all the slots below
  \item \code{nobs}: number of distinct sampling sites used.
  \item \code{df}: model's effective degrees of freedom.
  \item \code{maxsum}: the \code{maxsum} argument.
+ \item \code{pars}: named vector (sigma, lambda), where \code{sigma} is the
+   unbiased residual standard deviation \eqn{\sqrt{rss/(n - edf)}} that the
+   information criteria are evaluated at, and \code{lambda} is the argument,
+   recorded so that it can be recovered from a fit.
  \item \code{loglik}: Gaussian log-likelihood evaluated at the unbiased
-   residual variance \eqn{\sigma^2 = rss/(n - edf)}.
+   residual variance \eqn{\sigma^2 = rss/(n - edf)}, on the scale of
+   \code{y} as supplied.
  \item \code{gcv}: generalized cross-validation criterion.
  \item \code{gamma}: vector of additional times (time warps) of length
    \code{nobs - 1}.
@@ -84,6 +93,31 @@ averaging the corresponding \code{y}; the fitted values are therefore
 returned at the (possibly shorter) vector of unique, sorted \code{x} values
 available in the \code{x} slot of the output.
 }
+\section{Choosing \code{ebic_xi}}{
+
+The default is the value that minimises worst-case regret in root mean
+squared error over the 48-cell design of
+\code{inst/scripts/xi_calibration.R}. Unlike \code{\link{ssj_mle}} and
+\code{\link{ssj_kfs}}, whose optima are flat in \eqn{n}, the best value for
+this estimator falls steadily with the sample size -- about 0.32, 0.22, 0.15
+and 0.12 at \eqn{n} = 50, 100, 200 and 400. What is constant instead is the
+total charge per declared discontinuity,
+\eqn{s\log n + 2\xi\log(n-1)} with \eqn{s \approx 0.42} the degrees of
+freedom each activated warp adds, which held at 3.9 across the design
+(trend \eqn{-0.10} per \eqn{\log n}, 95\% interval \eqn{[-0.23, 0.02]}).
+That gives the rule
+\deqn{\xi(n) = \frac{3.93 - 0.419\log n}{2\log(n-1)},}
+which is worth using in place of the constant when \eqn{n} is far from a
+few hundred: at \eqn{n = 400} it improved root mean squared error by 4.4\%
+over the fixed 0.25. The constant is the default because it is the value
+that behaves acceptably everywhere, and because a default that changes with
+the data is easy to overlook.
+
+Note that the charge of about 3.9 on the \eqn{-2\log L} scale is close to 4,
+that is roughly two log-likelihood units per discontinuity -- what AIC
+charges for one free parameter.
+}
+
 \examples{
 # 'maxsum' is a warping budget in the units of x; the range of eruptions
 # is about 3.5, so a budget of 1 is already generous.

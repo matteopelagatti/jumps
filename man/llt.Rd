@@ -93,9 +93,12 @@ values are arbitrary and will be overwritten;}
 \item{d}{vector of the n observation error variance smoothers (Th.5.4 in Pelagatti, 2015);
 values are arbitrary and will be overwritten;}
 
-\item{w_}{NULL (default) or vector of n weights for the effect of observation y_t
-on the estimation of the hp filter (with jumps) at time t;
-values are arbitrary and will be overwritten;}
+\item{w_}{NULL (default) or vector of n weights, where element t is the
+weight of observation y_t on the smoothed signal at time t, that is the
+t-th diagonal element of the smoothing (hat) matrix, computed with the
+recursion of Koopman and Harvey (2003); their sum is the effective degrees
+of freedom. A missing y_t receives weight zero. Values are arbitrary on
+entry and will be overwritten;}
 }
 \value{
 The value of the Gaussian log-likelihood net of the -log(2*pi)*n/2 part

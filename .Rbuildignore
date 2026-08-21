@@ -13,7 +13,9 @@
 ^section3_results\.rds$
 # Replication material: the .R scripts are shipped, the bulky inputs/outputs
 # and intermediate results are not (they would blow up the tarball size).
+^xi_calibration_out
 ^inst/scripts/.*\.csv$
+^inst/scripts/.*\.tex$
 ^inst/scripts/.*\.rds$
 ^inst/scripts/.*\.pdf$
 # Rendered vignettes are rebuilt by R CMD build

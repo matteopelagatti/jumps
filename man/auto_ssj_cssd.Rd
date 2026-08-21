@@ -33,7 +33,7 @@ standard deviations (default 1).}
 \item{maxit_nm}{maximum number of Nelder-Mead iterations (default 200).}
 }
 \value{
-The output of \code{\link{ssj_cssd_potts}} at the cross-validated
+The output of \code{\link{ssj_cssd_dp}} at the cross-validated
   optimal \eqn{(p,\gamma)}, with two extra slots:
 \itemize{
   \item \code{cv_score}: the minimised cross-validation score.
@@ -72,5 +72,5 @@ signals. \emph{Journal of Computational and Graphical Statistics},
 \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 }
 \seealso{
-\code{\link{ssj_cssd_potts}}, \code{\link{predict_cssd_potts}}.
+\code{\link{ssj_cssd_dp}}, \code{\link{predict_cssd_dp}}.
 }
