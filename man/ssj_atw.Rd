@@ -65,10 +65,14 @@ An object of class \code{ssj} (a list, so that all the slots below
  \item \code{pars}: named vector (sigma, lambda), where \code{sigma} is the
    unbiased residual standard deviation \eqn{\sqrt{rss/(n - edf)}} that the
    information criteria are evaluated at, and \code{lambda} is the argument,
-   recorded so that it can be recovered from a fit.
- \item \code{loglik}: Gaussian log-likelihood evaluated at the unbiased
-   residual variance \eqn{\sigma^2 = rss/(n - edf)}, on the scale of
-   \code{y} as supplied.
+   recorded so that it can be recovered from a fit. The residual degrees of
+   freedom are one per fitted point, \eqn{n}, and not one per underlying
+   observation: the weighted \eqn{rss} holds only between-point variation,
+   the within-group scatter of tied \code{x} having been removed by the
+   collapse.
+ \item \code{loglik}: Gaussian log-likelihood of the \eqn{n} fitted points,
+   evaluated at the unbiased residual variance \eqn{\sigma^2 = rss/(n -
+   edf)}, on the scale of \code{y} as supplied.
  \item \code{gcv}: generalized cross-validation criterion.
  \item \code{gamma}: vector of additional times (time warps) of length
    \code{nobs - 1}.

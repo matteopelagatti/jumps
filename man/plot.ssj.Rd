@@ -10,6 +10,7 @@
   prob = NULL,
   show_breaks = TRUE,
   show_warp = TRUE,
+  warp_frac = 0.3,
   main = NULL,
   xlab = NULL,
   ylab = NULL,
@@ -33,6 +34,16 @@ are drawn at the declared discontinuities.}
 
 \item{show_warp}{logical: if \code{TRUE} (default), a lower panel with the
 estimated domain warps is added, when the estimator provides them.}
+
+\item{warp_frac}{share of the plotting height given to the lower panel, a
+number strictly between 0 and 1 (default \code{0.3}). The warp panel
+carries one value per interval and most of them are zero, so it needs much
+less room than the fitted curve; \code{0.5}, which is what equal panels
+amount to, wastes half the figure. It has no effect when there is no lower
+panel. In the \pkg{ggplot2} figure it requires \pkg{ggplot2} 4.0.0 or
+later, the version that introduced the \code{panel.heights} theme element;
+earlier versions draw panels of equal height and a non-default
+\code{warp_frac} then warns. Base graphics honour it at any version.}
 
 \item{main}{title of the plot; the default, \code{NULL}, draws no title.}
 
@@ -91,6 +102,9 @@ if (requireNamespace("ggplot2", quietly = TRUE)) {
 
 # base graphics instead
 plot(fit, use_ggplot = FALSE)
+
+# give the warp panel a fifth of the height instead of the default 30\%
+plot(fit, warp_frac = 0.2)
 
 }
 \references{

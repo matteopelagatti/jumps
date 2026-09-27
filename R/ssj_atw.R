@@ -74,10 +74,14 @@
 #'  \item \code{pars}: named vector (sigma, lambda), where \code{sigma} is the
 #'    unbiased residual standard deviation \eqn{\sqrt{rss/(n - edf)}} that the
 #'    information criteria are evaluated at, and \code{lambda} is the argument,
-#'    recorded so that it can be recovered from a fit.
-#'  \item \code{loglik}: Gaussian log-likelihood evaluated at the unbiased
-#'    residual variance \eqn{\sigma^2 = rss/(n - edf)}, on the scale of
-#'    \code{y} as supplied.
+#'    recorded so that it can be recovered from a fit. The residual degrees of
+#'    freedom are one per fitted point, \eqn{n}, and not one per underlying
+#'    observation: the weighted \eqn{rss} holds only between-point variation,
+#'    the within-group scatter of tied \code{x} having been removed by the
+#'    collapse.
+#'  \item \code{loglik}: Gaussian log-likelihood of the \eqn{n} fitted points,
+#'    evaluated at the unbiased residual variance \eqn{\sigma^2 = rss/(n -
+#'    edf)}, on the scale of \code{y} as supplied.
 #'  \item \code{gcv}: generalized cross-validation criterion.
 #'  \item \code{gamma}: vector of additional times (time warps) of length
 #'    \code{nobs - 1}.
@@ -155,16 +159,27 @@ ssj_atw <- function(y, x, lambda, maxsum = max(x) - min(x), weights = NULL,
                                 ebic_xi = ebic_xi, w_in = wt)
   # Back to the scale of the data as supplied.  The C++ routine sees y already
   # divided by y_scale, so its residual variance is smaller by y_scale^2 and
-  # its log-likelihood is larger by wsum*log(y_scale); the criteria, which
-  # enter as -2*loglik, are correspondingly smaller by 2*wsum*log(y_scale).
-  # (gcv is already corrected above by the y_scale^2 factor.)  The offset is
-  # the same at every value of maxsum, so it cancels in the comparisons that
-  # auto_ssj_atw() makes and cannot change which model is selected.
-  wsum   <- sum(wt)
-  ll_adj <- wsum * log(y_scale)
-  # sigma is the unbiased residual standard deviation the criteria are built
-  # on, back on the scale of y; lambda is reported so that the smoothing
-  # constant can be recovered from a fit, as it can from the other estimators.
+  # its log-likelihood is larger by n*log(y_scale); the criteria, which enter as
+  # -2*loglik, are correspondingly smaller by 2*n*log(y_scale).  (gcv is already
+  # corrected above by the y_scale^2 factor.)  The offset is the same at every
+  # value of maxsum, so it cancels in the comparisons that auto_ssj_atw() makes
+  # and cannot change which model is selected.
+  #
+  # n, not sum(wt): the likelihood is that of the n collapsed points, each the
+  # weighted mean of its replicates.  This matches ssj_kfs(), which likewise
+  # reports the likelihood of the collapsed means.
+  ll_adj <- n * log(y_scale)
+  # sigma is the unbiased residual standard deviation the criteria are built on,
+  # back on the scale of y; lambda is reported so that the smoothing constant
+  # can be recovered from a fit, as it can from the other estimators.
+  #
+  # The residual degrees of freedom are n - edf.  y_i is the weighted mean of
+  # its replicates and has variance sigma^2/w_i, so w_i*(y_i - f_i)^2 has
+  # expectation sigma^2 and the weighted rss carries one degree of freedom per
+  # POINT, not per underlying observation: the within-group scatter was removed
+  # by the collapse and never enters out$rss.  Using sum(wt) - edf here
+  # understated sigma by sqrt((sum(wt) - edf)/(n - edf)) -- 0.050 against a
+  # true 0.200 on a 400-observation, 40-site test.
   sigma_hat <- if (n - out$edf > 0) sqrt(out$rss / (n - out$edf)) * y_scale
                else NA_real_
   res <- list(nobs          = n,

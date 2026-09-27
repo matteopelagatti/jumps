@@ -89,3 +89,84 @@ test_that("weights are accepted by both routines", {
   expect_true(all(is.finite(g$smoothed_level)))
   expect_true(all(is.finite(c1$smoothed_level)))
 })
+
+## --- tied covariate values -------------------------------------------------
+## The fold partition must group replicates: ssj_atw() collapses tied x inside
+## whatever sample it is handed, so an observation-level split leaves siblings
+## of a held-out point in the training set and the criterion goes optimistic.
+
+mk_tied <- function(seed, nsite = 24, reps = 2:6) {
+  set.seed(seed)
+  xu <- round(seq(0, 1, length.out = nsite), 4)
+  # NB: not sample(reps, ...) -- a length-1 'reps' would make sample() draw
+  # from seq_len(reps) instead of from reps itself
+  m  <- if (length(reps) == 1L) rep(as.integer(reps), nsite)
+        else sample(reps, nsite, replace = TRUE)
+  x  <- rep(xu, times = m)
+  list(x = x, y = sin(2*pi*x) + 0.6*(x > 0.45) + rnorm(length(x), sd = 0.1),
+       site = rep(seq_along(xu), times = m), nsite = nsite)
+}
+
+test_that("default folds never split the replicates of a tied x", {
+  d <- mk_tied(8101)
+  expect_gt(length(d$x), d$nsite)             # ties must actually be present
+
+  # the partition is internal, so probe it through the seed: with grouping, a
+  # fit is reproducible from a seed and the recorded cv surface is finite
+  for (s in 1:5) {
+    set.seed(s)
+    f <- suppressWarnings(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT,
+                                          grid = G6, nfolds = 3))
+    expect_true(any(is.finite(f$cv_surface)))
+  }
+
+  # and the grouped partition this now builds is exactly what passing
+  # site-level folds by hand produces: same seed, same answer
+  set.seed(42)
+  auto <- suppressWarnings(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT,
+                                           grid = G6, nfolds = 3))
+  set.seed(42)
+  sf <- sample(rep_len(seq_len(3L), d$nsite))
+  byhand <- suppressWarnings(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT,
+                                             grid = G6, folds = sf[d$site]))
+  expect_equal(auto$cv_surface, byhand$cv_surface)
+  expect_equal(auto$pars[["lambda"]], byhand$pars[["lambda"]])
+})
+
+test_that("nfolds is bounded by the number of distinct x, not of observations", {
+  d <- mk_tied(8102, nsite = 6, reps = 4L)   # 24 observations, 6 sites
+  expect_equal(length(d$x), 24L)
+  expect_silent(f <- suppressWarnings(
+    auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT, grid = G6, nfolds = 6)))
+  expect_error(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT, grid = G6,
+                               nfolds = 7),
+               "number of distinct values")
+})
+
+test_that("a supplied partition that splits a site warns", {
+  d <- mk_tied(8103)
+  bad <- sample(rep_len(1:3, length(d$x)))     # observation-level: splits sites
+  expect_warning(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT, grid = G6,
+                                 folds = bad),
+                 "splits the replicates")
+  good <- sample(rep_len(1:3, d$nsite))[d$site]
+  expect_no_warning(suppressWarnings({   # boundary warning may still fire
+    withCallingHandlers(
+      auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT, grid = G6, folds = good),
+      warning = function(w) if (grepl("splits the replicates", conditionMessage(w)))
+        stop("site-splitting warning raised for a grouped partition"))
+  }))
+})
+
+test_that("an untied design is unaffected by the grouping", {
+  d <- mk(8104, n = 40)                        # continuous x: no ties
+  expect_equal(length(unique(d$x)), length(d$x))
+  set.seed(9)
+  a <- suppressWarnings(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT,
+                                        grid = G6, nfolds = 5))
+  set.seed(9)
+  b <- suppressWarnings(auto_ssj_atw_cv(d$y, d$x, lambda_grid = SHORT,
+                                        grid = G6, nfolds = 5))
+  expect_equal(a$cv_surface, b$cv_surface)
+  expect_false(any(is.na(a$cv_surface)))
+})

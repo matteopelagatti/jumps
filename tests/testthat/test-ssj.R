@@ -334,6 +334,41 @@ test_that("weighted collapsing reproduces the fit on the raw replicates", {
   expect_equal(raw$df, wgt$df)
 })
 
+test_that("ssj_atw reports sigma on n - edf residual df", {
+  # The weighted rss holds only BETWEEN-point variation: y_i is the mean of its
+  # replicates, w_i*(y_i - f_i)^2 has expectation sigma^2, and so the rss
+  # carries one degree of freedom per fitted point.  Dividing by sum(w) - edf
+  # instead understates sigma badly, and inflates the data-fit term of every
+  # criterion relative to its penalty by sum(w)/n.
+  f <- function(x) sin(2*pi*x) + 0.6*(x > 0.5)
+  set.seed(11)
+  xu <- sort(runif(30)); m <- sample(1:5, 30, replace = TRUE)
+  x  <- rep(xu, times = m); y <- f(x) + rnorm(length(x), sd = 0.15)
+
+  fit  <- ssj_atw(y, x, lambda = 0.05, maxsum = 0)
+  grp  <- cumsum(c(TRUE, diff(sort(x)) != 0))
+  ybar <- as.numeric(tapply(y[order(x)], grp, mean))
+  w    <- as.numeric(table(grp))
+  rss  <- sum(w * (ybar - fit$smoothed_level)^2)
+
+  expect_gt(sum(w), length(ybar))        # the two denominators must differ
+  expect_equal(fit$pars[["sigma"]], sqrt(rss / (length(ybar) - fit$df)))
+
+  # and it must be recoverable from the reported log-likelihood, which is built
+  # on the same sigma^2 -- this is the tie between the two that broke
+  nn <- length(ybar)
+  ll <- -0.5 * nn * log(2*pi) - 0.5 * nn * log(fit$pars[["sigma"]]^2) +
+        0.5 * sum(log(w)) - 0.5 * rss / fit$pars[["sigma"]]^2
+  expect_equal(fit$loglik, ll, tolerance = 1e-8)
+
+  # unit weights: the fix must be a no-op, both denominators being n
+  set.seed(12)
+  xd <- sort(runif(40)); yd <- f(xd) + rnorm(40, sd = 0.15)
+  fu <- ssj_atw(yd, xd, lambda = 0.05, maxsum = 0)
+  expect_equal(fu$pars[["sigma"]],
+               sqrt(sum((yd - fu$smoothed_level)^2) / (length(yd) - fu$df)))
+})
+
 test_that("unit weights reproduce the unweighted fit exactly", {
   set.seed(5)
   x <- sort(runif(40)); y <- sin(3*pi*x) + rnorm(40, sd = 0.1)

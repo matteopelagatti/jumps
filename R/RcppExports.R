@@ -25,9 +25,9 @@
 #'   \item{gamma}{The vector of added times (time jumps).}
 #'   \item{df}{Derivative of f.}
 #'   \item{edf}{Number of effective degrees of freedom.}
-#'   \item{rss}{Residual sum of squares with residuals = y - f.}
+#'   \item{rss}{Weighted residual sum of squares, sum_i w_i (y_i - f_i)^2.}
 #'   \item{gcv}{Generalized cross-validation.}
-#'   \item{loglik}{Gaussian log-likelihood evaluated at the unbiased residual variance sigma^2 = rss/(n - edf).}
+#'   \item{loglik}{Gaussian log-likelihood of the n fitted points, evaluated at the unbiased residual variance sigma^2 = rss/(n - edf). Every criterion below uses the same effective sample size n: the weighted rss holds only between-point variation, so it carries n - edf degrees of freedom whatever the weights.}
 #'   \item{aic}{Akaike information criterion.}
 #'   \item{aicc}{Akaike information criterion with bias correction.}
 #'   \item{bic}{Bayesian information criterion.}

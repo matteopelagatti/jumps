@@ -6,6 +6,17 @@ why the version jumps from 1.0.0 to 2.0.0.
 
 ## New features
 
+* `plot.ssj()` gains `warp_frac`, the share of the plotting height given to the
+  lower (warp) panel, default `0.3`. The panel holds one value per interval and
+  most of them are zero, so the equal panels the method drew before spent half
+  the figure on it. Base graphics now use `layout()` rather than `par(mfrow=)`,
+  which can only divide the height equally; the ggplot2 figure uses the
+  `panel.heights` theme element and so needs ggplot2 >= 4.0.0, warning if a
+  non-default `warp_frac` cannot be honoured. The figure is still a plain
+  `ggplot`, so it can be extended with `+` as before. The strip label of that
+  panel is shortened from "Domain warp" to "Warps", which no longer crowds the
+  axis beside it at the smaller height.
+
 * New family of functions for cubic smoothing splines with discontinuities
   (CSSD), implementing the dynamic-programming algorithm of Storath and
   Weinmann (2024): `ssj_cssd_dp()`, `auto_ssj_cssd()` (K-fold
@@ -176,6 +187,87 @@ why the version jumps from 1.0.0 to 2.0.0.
   recovered from a fit as it already could from the other estimators.
 
 ## Bug fixes
+
+* **`auto_ssj_cssd()` searched for the jump penalty on a grid fixed in absolute
+  terms, so its answer depended on the units of the response.** `gamma` is a
+  charge per discontinuity levied against the data-fit and smoothness terms,
+  both of which scale with the square of the units of `y`, but the coarse search
+  grid was `exp(seq(log(0.5), log(100), length.out = 20))` whatever the data. On
+  the electricity-demand example (`demand_temp`, sd 1523 MWh, noise variance
+  about 1.3e6) the whole grid lay below 1e-4 of a single squared residual, where
+  a discontinuity costs nothing: the fit reported 146 discontinuities among 295
+  sites, at a cross-validated error 2.8 times worse than the optimum the search
+  never reached, and dividing `y` by 1000 gave none at all. On a signal of unit
+  scale the same grid is the opposite extreme -- at sigma = 0.05 on the design of
+  the simulation study the cross-validated optimum falls below the grid's floor,
+  so the estimator was held to fewer discontinuities than cross-validation
+  wanted. The search is now conducted on `y` standardised to unit standard
+  deviation, with `gamma` mapped back to the units of `y` on return, and the
+  grid spans six orders of magnitude. Fits are now invariant to the units of the
+  response (agreeing to 4e-11 MWh across a 1e6 change of units). A selected
+  penalty at the edge of the search range now warns, and the range is exposed as
+  the new `gamma_grid` argument. `gamma_init` is interpreted in the units of `y`
+  and `cv_score` is reported in the units of `y^2`.
+
+  Scaling the search grid alone would not have sufficed. The search is
+  parameterised as `gamma = p*q/(1-q)` with the optimiser working in `logit(q)`,
+  so the reachable range of `gamma` depends on the units of `y` even when the
+  grid is scaled with them: on the demand data in MWh that route gives the right
+  answer, but at a thousandfold larger scale it drifts by two orders of
+  magnitude and at a millionfold larger scale `1 - q` underflows and the search
+  fails outright. Standardising holds `logit(q)` at the same value for every
+  scaling. `q` is now also clamped below 1, so an extreme `gamma_grid` returns
+  the classical spline rather than failing.
+
+  This changes results. On the electricity-demand data `auto_ssj_cssd()` now
+  declares no discontinuities rather than 146; on the simulation design at
+  sigma = 0.05 it declares markedly more than before. Any CSSD result obtained
+  with an earlier version should be recomputed.
+
+* **`auto_ssj_atw_cv()` cross-validated optimistically on designs with tied
+  covariate values.** Folds were drawn over the observations, so replicates of
+  the same `x` landed in different folds. Since `ssj_atw()` collapses tied `x`
+  inside whatever sample it is handed, the training set then contained siblings
+  of every held-out point and pinned the fit at that very covariate value: the
+  criterion measured the error of predicting a fresh observation at an
+  *already observed* `x`, not at a new one. On tied designs every held-out
+  observation was affected, and the cross-validated error understated the
+  quantity of interest by about a third under heavy replication (median 0.043
+  against 0.064 over six designs with 25 sites and 10-30 replicates each).
+  Folds are now drawn over the distinct values of `x`, so all replicates at a
+  site are held out together; `nfolds` is bounded by the number of distinct
+  values rather than by `length(y)`, and a user-supplied `folds` that splits a
+  site now warns. Designs with no ties are unaffected -- the two partitions
+  coincide there -- so no previously published result changes.
+
+* **`ssj_atw()` and the criteria behind it used the wrong effective sample size
+  when the observation weights were not all one**, which includes every fit in
+  which tied values of `x` were collapsed, since the replicate counts then
+  become the weights. `mse`, `gcv`, `aic`, `aicc`, `bic`, `hq`, the reported
+  log-likelihood and the reported `sigma` all divided the weighted residual sum
+  of squares by `sum(weights)`, as though it held one degree of freedom per
+  underlying observation. It does not: `y_i` is the weighted mean of its
+  replicates and has variance `sigma^2/w_i`, so `w_i*(y_i - f_i)^2` has
+  expectation `sigma^2` and the weighted rss carries one degree of freedom per
+  fitted *point*. The within-group scatter of the replicates is removed by the
+  collapse and never reaches the routine at all.
+
+  Two consequences, both now fixed by using `n`. The reported `sigma` was far
+  too small -- 0.050 against a true 0.200 on a 400-observation, 40-site test,
+  where it now returns 0.193. And the data-fit term of every criterion was
+  inflated relative to its penalty by `sum(weights)/n`, so the penalty was that
+  much too weak: on the electricity-demand data (1691 observations at 295
+  distinct temperatures, a ratio of 5.7) the extended BIC fell monotonically to
+  the largest budget on the grid and `auto_ssj_atw_cv()` declared 20
+  discontinuities, against 4 for `auto_ssj_mle()` on the same data. It now
+  declares 2, with an estimated noise standard deviation of 1096 MWh against
+  1120 MWh from the within-site scatter, and its discontinuity at 27 degrees is
+  a subset of the four that `auto_ssj_mle()` finds.
+
+  Designs with no ties and unit weights are unaffected, `n` and `sum(weights)`
+  being equal there, so no previously published result changes. The reported
+  log-likelihood now also carries the `0.5*sum(log(w))` Jacobian of the
+  collapse, which is free of the budget and so cannot affect selection.
 
 * **`ssj_kfs()` and `ssj_fix()` frequently failed to converge**, returning a
   scale parameter many orders of magnitude too large and a log-likelihood far

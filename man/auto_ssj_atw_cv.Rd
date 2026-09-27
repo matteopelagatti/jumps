@@ -33,10 +33,15 @@ errors; see its help page.}
 units of \code{x}; the default is as in \code{\link{auto_ssj_atw_gcv}}.
 No floor is needed here, so it may be extended downwards freely.}
 
-\item{nfolds}{integer number of cross-validation folds (default 5).}
+\item{nfolds}{integer number of cross-validation folds (default 5). Folds
+are drawn over the \emph{distinct} values of \code{x}, so all replicates
+at a tied covariate value are held out together; \code{nfolds} must
+therefore not exceed the number of distinct values. See Details.}
 
 \item{folds}{optional integer vector of fold labels, one per observation,
-for reproducibility or for grouped designs; overrides \code{nfolds}.}
+for reproducibility or for grouped designs; overrides \code{nfolds}. A
+partition that puts replicates of the same \code{x} in different folds
+draws a warning, since the resulting criterion is optimistic.}
 
 \item{grid}{numeric vector of \code{maxsum} values, used both for the
 cross-validation surface and for the final selection of \eqn{M}.}
@@ -76,6 +81,16 @@ The smoothing constant is a different matter -- it governs a global
 bias-variance trade-off to which every held-out point contributes -- and
 there cross-validation is competitive with maximum likelihood. Hence the
 split: cross-validate \code{lambda}, leave \eqn{M} to the criterion.
+
+Tied values of \code{x} require a choice about the partition. Folds are drawn
+over the distinct values of \code{x}, so every replicate at a tied covariate
+value is held out together. Drawing them over the observations instead would
+leave replicates of a held-out site in the training sample, where
+\code{\link{ssj_atw}} collapses them and pins the fit at that very covariate
+value; the criterion would then estimate the error of predicting a fresh
+observation at an already observed \code{x} rather than at a new one, and is
+optimistic for the present purpose -- by roughly a third under heavy
+replication. For a design with no ties the two partitions coincide.
 }
 \examples{
 set.seed(11)
