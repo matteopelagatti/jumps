@@ -189,6 +189,16 @@ auto_ssj_atw_gcv <- function(y, x, weights = NULL, lambda_grid = NULL,
 #' there cross-validation is competitive with maximum likelihood. Hence the
 #' split: cross-validate \code{lambda}, leave \eqn{M} to the criterion.
 #'
+#' Tied values of \code{x} require a choice about the partition. Folds are drawn
+#' over the distinct values of \code{x}, so every replicate at a tied covariate
+#' value is held out together. Drawing them over the observations instead would
+#' leave replicates of a held-out site in the training sample, where
+#' \code{\link{ssj_atw}} collapses them and pins the fit at that very covariate
+#' value; the criterion would then estimate the error of predicting a fresh
+#' observation at an already observed \code{x} rather than at a new one, and is
+#' optimistic for the present purpose -- by roughly a third under heavy
+#' replication. For a design with no ties the two partitions coincide.
+#'
 #' @param y numeric vector with the response (no missing values allowed).
 #' @param x numeric vector with the covariate (no missing values allowed).
 #' @param weights optional numeric vector of positive observation weights,
@@ -197,9 +207,14 @@ auto_ssj_atw_gcv <- function(y, x, weights = NULL, lambda_grid = NULL,
 #' @param lambda_grid numeric vector of candidate smoothing constants, in the
 #'   units of \code{x}; the default is as in \code{\link{auto_ssj_atw_gcv}}.
 #'   No floor is needed here, so it may be extended downwards freely.
-#' @param nfolds integer number of cross-validation folds (default 5).
+#' @param nfolds integer number of cross-validation folds (default 5). Folds
+#'   are drawn over the \emph{distinct} values of \code{x}, so all replicates
+#'   at a tied covariate value are held out together; \code{nfolds} must
+#'   therefore not exceed the number of distinct values. See Details.
 #' @param folds optional integer vector of fold labels, one per observation,
-#'   for reproducibility or for grouped designs; overrides \code{nfolds}.
+#'   for reproducibility or for grouped designs; overrides \code{nfolds}. A
+#'   partition that puts replicates of the same \code{x} in different folds
+#'   draws a warning, since the resulting criterion is optimistic.
 #' @param grid numeric vector of \code{maxsum} values, used both for the
 #'   cross-validation surface and for the final selection of \eqn{M}.
 #' @param ic string with the information criterion used to choose \eqn{M},
@@ -251,15 +266,37 @@ auto_ssj_atw_cv <- function(y, x, weights = NULL, lambda_grid = NULL,
     stop("'lambda_grid' must be a vector of positive, finite values")
   grid <- sort(as.numeric(grid))
 
+  # Folds are drawn over the DISTINCT values of x, not over the observations.
+  # ssj_atw() collapses tied x in whatever sample it is given, so a partition
+  # made observation by observation leaves replicates of a held-out site in the
+  # training set, and the held-out point is then scored at a covariate value the
+  # training sample already pins down.  The criterion that results estimates the
+  # error of predicting a fresh observation at an ALREADY OBSERVED x, which is
+  # optimistic for the quantity wanted here -- the error at a new x -- by about
+  # a third under heavy replication.  Grouping by site targets the right
+  # quantity.  With no ties the two partitions coincide, so nothing changes for
+  # a design with distinct covariate values.
+  site   <- match(x, sort(unique(x)))
+  nsite  <- max(site)
   if (is.null(folds)) {
     nfolds <- as.integer(nfolds)
-    if (!is.finite(nfolds) || nfolds < 2L || nfolds > n)
-      stop("'nfolds' must be between 2 and length(y)")
-    folds <- sample(rep_len(seq_len(nfolds), n))
+    if (!is.finite(nfolds) || nfolds < 2L || nfolds > nsite)
+      stop("'nfolds' must be between 2 and the number of distinct values of ",
+           "'x' (", nsite, ")")
+    folds <- sample(rep_len(seq_len(nfolds), nsite))[site]
   } else {
     folds <- as.integer(folds)
     if (length(folds) != n) stop("'folds' must have the same length as 'y'")
     if (length(unique(folds)) < 2L) stop("'folds' must define at least 2 folds")
+    # A supplied partition is respected -- the caller may have a grouping of
+    # their own -- but a split site is almost always an oversight, so say so.
+    split_sites <- sum(tapply(folds, site, function(z) length(unique(z))) > 1L)
+    if (split_sites > 0L)
+      warning("'folds' splits the replicates of ", split_sites,
+              " tied value(s) of 'x' across folds: the cross-validated error ",
+              "is then optimistic, because a held-out point is scored at a ",
+              "covariate value that is also in the training sample.",
+              call. = FALSE)
   }
 
   err <- den <- matrix(0, length(lambda_grid), length(grid),

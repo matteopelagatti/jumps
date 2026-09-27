@@ -324,6 +324,15 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #'   are drawn at the declared discontinuities.
 #' @param show_warp logical: if \code{TRUE} (default), a lower panel with the
 #'   estimated domain warps is added, when the estimator provides them.
+#' @param warp_frac share of the plotting height given to the lower panel, a
+#'   number strictly between 0 and 1 (default \code{0.3}). The warp panel
+#'   carries one value per interval and most of them are zero, so it needs much
+#'   less room than the fitted curve; \code{0.5}, which is what equal panels
+#'   amount to, wastes half the figure. It has no effect when there is no lower
+#'   panel. In the \pkg{ggplot2} figure it requires \pkg{ggplot2} 4.0.0 or
+#'   later, the version that introduced the \code{panel.heights} theme element;
+#'   earlier versions draw panels of equal height and a non-default
+#'   \code{warp_frac} then warns. Base graphics honour it at any version.
 #' @param main title of the plot; the default, \code{NULL}, draws no title.
 #' @param xlab,ylab axis labels; if \code{NULL} defaults are used.
 #' @param col_fit,col_data colours of the fitted curve and of the observations.
@@ -375,15 +384,23 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #' # base graphics instead
 #' plot(fit, use_ggplot = FALSE)
 #'
+#' # give the warp panel a fifth of the height instead of the default 30%
+#' plot(fit, warp_frac = 0.2)
+#'
 #' @export
 plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
-                     show_warp = TRUE, main = NULL, xlab = NULL, ylab = NULL,
+                     show_warp = TRUE, warp_frac = 0.3, main = NULL,
+                     xlab = NULL, ylab = NULL,
                      col_fit = "firebrick", col_data = "steelblue",
                      use_ggplot = TRUE, ...) {
   obj <- x
   xx  <- obj$x
   yy  <- obj$y
   fit <- obj$smoothed_level
+
+  if (!is.numeric(warp_frac) || length(warp_frac) != 1L ||
+      !is.finite(warp_frac) || warp_frac <= 0 || warp_frac >= 1)
+    stop("'warp_frac' must be a single number strictly between 0 and 1")
 
   if (use_ggplot && !requireNamespace("ggplot2", quietly = TRUE)) {
     warning("package 'ggplot2' is not installed: falling back to base graphics")
@@ -417,7 +434,9 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
   # between panels are combined without an extra package.
   if (use_ggplot) {
     key <- c("fit", "warp")
-    lab_warp <- if (ssj_is_warp(obj)) "Domain warp" else "Additional s.d."
+    # Short label: the panel is now about a third of the height, so a long
+    # strip label crowds the axis it sits beside.
+    lab_warp <- if (ssj_is_warp(obj)) "Warps" else "Additional s.d."
     lvl <- if (panel2) c(ylab_fit = ylab, w = lab_warp) else ylab
     mkp <- function(d, which) {
       d$panel <- factor(if (which == 1L) ylab else lab_warp,
@@ -466,6 +485,24 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
                                      scales = "free_y", switch = "y") +
         ggplot2::theme(strip.placement = "outside",
                        strip.background = ggplot2::element_blank())
+      # The warp panel carries one number per interval and needs far less room
+      # than the fit.  'panel.heights' takes null units, which the gtable
+      # divides in proportion, so c(1 - warp_frac, warp_frac) gives the warp
+      # panel exactly that share of the plotting height.  The element arrived in
+      # ggplot2 4.0.0 and older versions ignore an unknown theme element in
+      # silence rather than failing, so the version is checked rather than the
+      # result: an unhonoured request would otherwise look like a bug in this
+      # function.  Base graphics honour 'warp_frac' at every ggplot2 version,
+      # since they do not use ggplot2 at all.
+      if (utils::packageVersion("ggplot2") >= "4.0.0") {
+        gg <- gg + ggplot2::theme(
+          panel.heights = ggplot2::unit(c(1 - warp_frac, warp_frac), "null"))
+      } else if (!isTRUE(all.equal(warp_frac, 0.3))) {
+        warning("'warp_frac' needs ggplot2 >= 4.0.0 to take effect in the ",
+                "ggplot2 figure; the panels will be of equal height. Use ",
+                "use_ggplot = FALSE for base graphics, which honour it.",
+                call. = FALSE)
+      }
     }
     gg <- gg + ggplot2::labs(x = xlab, y = if (panel2) NULL else ylab,
                              title = main)
@@ -477,9 +514,15 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
   on.exit(par(op), add = TRUE)
 
   if (panel2) {
+    # layout(), not mfrow: mfrow can only make panels of equal height, and the
+    # warp panel needs only 'warp_frac' of the plotting region.  Null units are
+    # divided in proportion, so the two entries are the shares themselves.
+    # par(op) on exit restores mfrow, which returns the device to a plain 1x1
+    # layout, so no separate layout(1) is needed.
+    layout(matrix(c(1L, 2L), ncol = 1L),
+           heights = c(1 - warp_frac, warp_frac))
     # reserve room at the top only when there is actually a title to draw
-    par(mfrow = c(2, 1), mar = c(0.5, 4.5, if (is.null(main)) 1 else 3, 1),
-        oma = c(4, 0, 0, 0))
+    par(mar = c(0.5, 4.5, if (is.null(main)) 1 else 3, 1), oma = c(4, 0, 0, 0))
   }
 
   # ---- upper panel: data, fitted curve, declared discontinuities ----------
@@ -505,7 +548,7 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
     g   <- if (ssj_is_warp(obj)) as.numeric(obj$gamma) else as.numeric(obj$sigmas)[-1L]
     g[!is.finite(g)] <- 0
     xg  <- xx[-1L]
-    lab <- if (ssj_is_warp(obj)) expression("Domain warp" ~ gamma) else "Additional s.d."
+    lab <- if (ssj_is_warp(obj)) expression("Warps" ~ gamma) else "Additional s.d."
 
     par(mar = c(0.5, 4.5, 0.5, 1))
     plot(xg, g, type = "h", col = "grey80", xlab = "", ylab = lab)

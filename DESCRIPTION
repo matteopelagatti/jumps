@@ -25,7 +25,8 @@ Imports: Rcpp (>= 1.0.10),
          stats,
          graphics,
          grDevices,
-         nloptr
+         nloptr,
+         utils
 LinkingTo: Rcpp,
            RcppEigen
 RoxygenNote: 7.3.3

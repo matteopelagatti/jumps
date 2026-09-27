@@ -11,6 +11,7 @@ auto_ssj_cssd(
   delta = 1,
   p_init = 0.99,
   gamma_init = 1,
+  gamma_grid = NULL,
   maxit_nm = 200L
 )
 }
@@ -28,7 +29,21 @@ standard deviations (default 1).}
 
 \item{p_init}{initial stiffness (default 0.99, as in the paper).}
 
-\item{gamma_init}{initial jump penalty (default 1, as in the paper).}
+\item{gamma_init}{initial jump penalty, in the units of \code{y} (default 1).
+The search itself is conducted on \code{y} standardised to unit standard
+deviation, so that the range of jump penalties explored does not depend on
+the units of the response; \code{gamma_init} is standardised with it, and
+the \code{gamma} reported in \code{cv_par} is back in the units of
+\code{y}. A selected penalty at the edge of the search range draws a
+warning, since the number of discontinuities is then set by the range
+rather than by the data.}
+
+\item{gamma_grid}{optional vector of candidate jump penalties for the coarse
+search, in units of \code{var(y)}; the default spans \code{1e-3} to
+\code{1e3} over 25 logarithmically spaced points, which covers the range of
+noise-to-signal ratios met in practice. The Nelder-Mead refinement is not
+confined to it, but a coarse grid that misses the optimum by orders of
+magnitude can leave the refinement in a local dip.}
 
 \item{maxit_nm}{maximum number of Nelder-Mead iterations (default 200).}
 }

@@ -301,7 +301,20 @@ predict_cssd_dp <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
 #' @param delta positive scalar or vector of length \code{n} with the noise
 #'   standard deviations (default 1).
 #' @param p_init initial stiffness (default 0.99, as in the paper).
-#' @param gamma_init initial jump penalty (default 1, as in the paper).
+#' @param gamma_init initial jump penalty, in the units of \code{y} (default 1).
+#'   The search itself is conducted on \code{y} standardised to unit standard
+#'   deviation, so that the range of jump penalties explored does not depend on
+#'   the units of the response; \code{gamma_init} is standardised with it, and
+#'   the \code{gamma} reported in \code{cv_par} is back in the units of
+#'   \code{y}. A selected penalty at the edge of the search range draws a
+#'   warning, since the number of discontinuities is then set by the range
+#'   rather than by the data.
+#' @param gamma_grid optional vector of candidate jump penalties for the coarse
+#'   search, in units of \code{var(y)}; the default spans \code{1e-3} to
+#'   \code{1e3} over 25 logarithmically spaced points, which covers the range of
+#'   noise-to-signal ratios met in practice. The Nelder-Mead refinement is not
+#'   confined to it, but a coarse grid that misses the optimum by orders of
+#'   magnitude can leave the refinement in a local dip.
 #' @param maxit_nm maximum number of Nelder-Mead iterations (default 200).
 #'
 #' @returns The output of \code{\link{ssj_cssd_dp}} at the cross-validated
@@ -330,7 +343,7 @@ predict_cssd_dp <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
 #'
 #' @export
 auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
-                          p_init = 0.99, gamma_init = 1,
+                          p_init = 0.99, gamma_init = 1, gamma_grid = NULL,
                           maxit_nm = 200L) {
   y <- as.numeric(y)
   n <- length(y)
@@ -351,15 +364,39 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
   if (n < 2L) stop("at least two distinct values of 'x' are needed.")
   delta <- rep(as.numeric(delta), length.out = n)
 
+  # The search is conducted on y standardised to unit standard deviation, and
+  # the selected gamma is mapped back at the end.  gamma is a charge per
+  # discontinuity levied against the data-fit and smoothness terms, both of
+  # which scale with the square of the units of y, so a grid fixed in absolute
+  # terms is meaningful for exactly one scaling of the response.  Searching
+  # [0.5, 100] with y in MWh (sd ~ 1.5e3, so sigma^2 ~ 1.3e6) puts the whole
+  # grid at under 1e-4 of a single squared residual, where every candidate buys
+  # a discontinuity for nothing: on the electricity-demand data that produced
+  # 146 discontinuities among 295 sites, at a cross-validated error 2.8 times
+  # worse than the optimum the search never reached.  The same grid on a signal
+  # of unit scale is the opposite extreme.  Both terms of the objective carry
+  # the factor, so p is unaffected and only gamma has to be rescaled.
+  y_scale <- stats::sd(y)
+  if (!is.finite(y_scale) || y_scale <= 0) y_scale <- 1
+  yz <- y / y_scale
+
   fold_id <- sample(rep(seq_len(k_folds), length.out = n))
 
   # Paper's reparameterisation (Section 3.4): optimise over (p, q) where
   # gamma = p * q / (1 - q).  This mirrors dividing the objective by p and
   # mapping gamma' = gamma/p via q/(1-q), giving a compact search space.
   # par = [logit(p), logit(q)]
+  # Clamp q away from 1 as well as p: gamma = p*q/(1-q) needs logit(q) ~ 35 to
+  # reach gamma ~ 1e13, and beyond that 1 - q underflows to zero and gamma
+  # becomes Inf, which the dynamic program cannot use.  Standardising the
+  # response keeps logit(q) near 2.5 whatever the units of y, so the optimiser
+  # never goes near this on its own; the guard is for a 'gamma_grid' supplied
+  # in the extreme.  q = 1 - 1e-12 already means a penalty of order 1e12 times
+  # var(y), which is the classical cubic spline for any practical purpose.
+  q_max <- 1 - 1e-12
   cv_score <- function(par) {
     p_try <- 1 / (1 + exp(-par[1]))
-    q_try <- 1 / (1 + exp(-par[2]))
+    q_try <- min(1 / (1 + exp(-par[2])), q_max)
     # Clamp p away from 1: beta = sqrt(1-p) -> 0 causes QR degeneracy
     p_try   <- min(p_try, 0.9999)
     gam_try <- p_try * q_try / (1 - q_try)
@@ -369,17 +406,17 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
       te <- which(fold_id == fold)
       if (length(tr) < 3L || length(te) == 0L) next
       fit_tr <- tryCatch(
-        cssd_dp(y[tr], x[tr], p = p_try, gamma = gam_try,
+        cssd_dp(yz[tr], x[tr], p = p_try, gamma = gam_try,
                    delta_in = delta[tr]),
         error = function(e) NULL
       )
       if (is.null(fit_tr)) return(1e12)
       pred <- as.numeric(
-        cssd_dp_predict(y[tr], x[tr], fit_tr$f_hat,
+        cssd_dp_predict(yz[tr], x[tr], fit_tr$f_hat,
                            fit_tr$disc_locs, x[te],
                            p_try, delta[tr])
       )
-      err <- err + sum(((y[te] - pred) / delta[te])^2, na.rm = TRUE)
+      err <- err + sum(((yz[te] - pred) / delta[te])^2, na.rm = TRUE)
     }
     err / n
   }
@@ -388,10 +425,22 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
   # This replaces Matlab's simulannealbnd: bounded, deterministic, and equally
   # reliable for this problem size (Section 3.4 notes grid search as the
   # parallel-processing alternative to simulated annealing).
+  # gam_grid is in the units of the STANDARDISED response, and spans six orders
+  # of magnitude: the optimum moves with the noise-to-signal ratio, and a narrow
+  # grid whose end is binding is silently satisfied rather than reported.  On the
+  # Section-3 design at sigma = 0.05 the cross-validated optimum sits at 0.33 in
+  # these units, below the old floor of 0.5, which is why that estimator looked
+  # more conservative there than cross-validation wanted.
   p_grid   <- c(0.9, 0.99, 0.999)
-  gam_grid <- exp(seq(log(0.5), log(100), length.out = 20L))
+  gam_grid <- if (is.null(gamma_grid))
+    exp(seq(log(1e-3), log(1e3), length.out = 25L))
+  else sort(as.numeric(gamma_grid))
+  if (!length(gam_grid) || any(!is.finite(gam_grid)) || any(gam_grid <= 0))
+    stop("'gamma_grid' must be a vector of positive, finite values")
 
-  # Initial (p, q) from (p_init, gamma_init): q = gamma / (p + gamma)
+  # Initial (p, q) from (p_init, gamma_init): q = gamma / (p + gamma).
+  # gamma_init is given in the units of y, so it is standardised like the grid.
+  gamma_init <- gamma_init / y_scale^2
   q_init   <- gamma_init / (p_init + gamma_init)
   best_val <- Inf
   best_par <- c(log(p_init / (1 - p_init)), log(q_init / (1 - q_init)))
@@ -409,11 +458,23 @@ auto_ssj_cssd <- function(y, x = NULL, k_folds = 5L, delta = 1,
                       control = list(maxit = maxit_nm, reltol = 1e-4))
 
   p_opt   <- min(1 / (1 + exp(-opt$par[1])), 0.9999)
-  q_opt   <- 1 / (1 + exp(-opt$par[2]))
-  gam_opt <- p_opt * q_opt / (1 - q_opt)
+  q_opt   <- min(1 / (1 + exp(-opt$par[2])), q_max)
+  gam_z   <- p_opt * q_opt / (1 - q_opt)      # standardised units
+  gam_opt <- gam_z * y_scale^2                # back to the units of y
+
+  # A selected gamma at either end of the grid means the grid, not the data, is
+  # deciding how many discontinuities there are.  Say so rather than returning a
+  # constrained answer silently -- that is how the electricity-demand fit came
+  # to report 146 discontinuities without complaint.
+  if (gam_z <= 1.5 * min(gam_grid) || gam_z >= max(gam_grid) / 1.5)
+    warning("auto_ssj_cssd() selected a jump penalty at the edge of its search ",
+            "range (gamma = ", signif(gam_opt, 4), ", i.e. ", signif(gam_z, 4),
+            " in units of var(y)): the number of discontinuities may be set by ",
+            "the search range rather than by the data.", call. = FALSE)
 
   fit <- ssj_cssd_dp(y, x, p = p_opt, gamma = gam_opt, delta = delta)
-  fit$cv_score <- opt$value
+  # cv_score is reported in the units of y^2, like the data it came from
+  fit$cv_score <- opt$value * y_scale^2
   fit$cv_par   <- c(p = p_opt, gamma = gam_opt)
   fit$call     <- match.call()
   fit

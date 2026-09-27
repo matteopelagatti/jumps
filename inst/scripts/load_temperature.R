@@ -83,105 +83,67 @@ df |>
 
 # PASS SMOOTHING SPLINES WITH JUMPS
 library(jumps)
-ss1 <- auto_ssj_mle(y = dt$MWh, x = dt$Celsius,
-                    ic = "ebic", ebic_xi = 0.3)
+set.seed(202609)
 
-# BASIC PLOT
-plot(ss1$x, ss1$smoothed_level, type = "l",
-     lwd = 2, main = "Electricity demand vs. temperature",
-     xlab = "Temperature (C°)",
-     ylab = "Demand (MWh)")
-points(x = dt$Celsius, y = dt$MWh,
-       pch = 16, col = "blue", cex = 0.5)
-abline(v  = ss1$x[-1][ss1$gamma > .2],
-       lty = 2, lwd = 2)
-grid()
+result_mle <- auto_ssj_mle(y = dt$MWh, x = dt$Celsius,
+                           ic = "ebic", ebic_xi = 0.3)
+
+result_atw <- auto_ssj_atw_cv(y = dt$MWh, x = dt$Celsius,
+                              lambda_grid = ssj_lambda_grid(dt$Celsius,
+                                                            n_lambda = 15L,
+                                                            from = 1e-3,
+                                                            to = 1e+1),
+                              ic = "ebic", ebic_xi = 0.3)
 
 
-## ==========================================
-## 4. FINAL PLOT (ggplot2)
-## ==========================================
-# needs cowplot, only for plot_grid(), which aligns the two panels vertically
+sw <- sqrt(mean(tapply(dt$MWh, dt$Celsius,
+                       function(z) if (length(z) > 1) var(z) else NA), na.rm = TRUE))
+result_cssd <- auto_ssj_cssd(y = dt$MWh, x = dt$Celsius, delta = sw)
 
-jump_thr <- 0.2   # threshold on gamma above which a jump is declared
+p_mle <- plot(result_mle, main = "SSJ-MLE", xlab = "Temperature C°", ylab = "Load (MWh)")
+ggplot2::ggsave("demand_vs_temperature_mle.pdf", p_mle, width = 4.5, height = 4.5, dpi = 300, bg = "white")
 
-# fitted level (ss1$x is sorted, ties included) with its +/- 2 s.e. band
-fit_df <- tibble(
-  Celsius = ss1$x,
-  level   = ss1$smoothed_level,
-  se      = sqrt(ss1$var_smoothed_level)
+p_atw <- plot(result_atw, main = "SSJ-ATW (CV for lambda)", xlab = "Temperature C°", ylab = "Load (MWh)")
+ggplot2::ggsave("demand_vs_temperature_atw.pdf", p_atw, width = 4.5, height = 4.5, dpi = 300, bg = "white")
+
+plot(result_cssd, main = "CSSD", xlab = "Temperature C°", ylab = "Load (MWh)")
+
+# Sensitivity to the choice of xi
+vxi <- seq(0.10, 0.5, 0.05)
+res_mle <- vector("list", length(vxi))
+res_atw <- vector("list", length(vxi))
+for (i in seq_along(vxi)) {
+  set.seed(202609)
+  res_mle[[i]] <- auto_ssj_mle(y = dt$MWh, x = dt$Celsius,
+                             ic = "ebic", ebic_xi = vxi[i])
+  
+  res_atw[[i]] <- auto_ssj_atw_cv(y = dt$MWh, x = dt$Celsius,
+                                lambda_grid = ssj_lambda_grid(dt$Celsius,
+                                                              n_lambda = 15L,
+                                                              from = 1e-3,
+                                                              to = 1e+1),
+                                ic = "ebic", ebic_xi = vxi[i])
+}
+
+names(res_mle) <- vxi
+names(res_atw) <- vxi
+
+sapply(res_mle, function(x) ssj_breaks(x) |> nrow())
+sapply(res_atw, function(x) ssj_breaks(x) |> nrow())
+
+df_warps <- rbind(
+  cbind(method = "MLE", purrr::map_dfr(res_mle, ssj_breaks, .id = "xi")),
+  cbind(method = "ATW", purrr::map_dfr(res_atw, ssj_breaks, .id = "xi"))
 )
 
-# gamma[i] refers to the interval ending at x[i + 1] -> align it with ss1$x[-1]
-gamma_df <- tibble(
-  Celsius = ss1$x[-1],
-  gamma   = ss1$gamma,
-  is_jump = gamma > jump_thr
-)
-
-jump_x <- gamma_df$Celsius[gamma_df$is_jump]
-
-col_pts  <- "#4C78A8"
-col_fit  <- "#D55E00"
-col_jump <- "grey30"
-
-# common horizontal scale, so the two panels line up exactly
-x_lim   <- range(ss1$x) + c(-1, 1) * 0.02 * diff(range(ss1$x))
-x_scale <- scale_x_continuous(limits = x_lim, expand = c(0, 0),
-                              breaks = scales::breaks_width(5))
-
-theme_paper <- theme_minimal(base_size = 12) +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major = element_line(linewidth = 0.3, colour = "grey88"),
-        plot.title       = element_text(face = "bold", size = 13),
-        plot.subtitle    = element_text(colour = "grey35", size = 10),
-        plot.caption     = element_text(colour = "grey45", size = 8.5, hjust = 0),
-        plot.margin      = margin(5.5, 10, 5.5, 10))
-
-# ---- upper panel: data, fitted spline, jump locations --------------------
-p_fit <- ggplot() +
-  geom_vline(xintercept = jump_x, linetype = "dashed",
-             linewidth = 0.4, colour = col_jump) +
-  geom_point(data = dt, aes(Celsius, MWh),
-             colour = col_pts, alpha = 0.3, size = 1.1) +
-  geom_ribbon(data = fit_df,
-              aes(Celsius, ymin = level - 2 * se, ymax = level + 2 * se),
-              fill = col_fit, alpha = 0.3) +
-  geom_path(data = fit_df, aes(Celsius, level),   # path, not line: keeps the
-            colour = col_fit, linewidth = 1) +    # vertical steps at the jumps
-  x_scale +
-  scale_y_continuous(labels = scales::label_comma()) +
-  # zoom in (coord_*, not scale limits: the few points below are just hidden)
-  coord_cartesian(ylim = c(18000, NA)) +
-  labs(title    = "Electricity demand vs. temperature",
-       subtitle = "Northern Italy, Tue–Thu, hours 10–15",
-       x = NULL, y = "Demand (MWh)") +
-  theme_paper +
-  theme(axis.text.x = element_blank())
-
-# ---- lower panel: estimated jump strengths -------------------------------
-p_gamma <- ggplot(subset(gamma_df, is_jump), aes(Celsius, gamma)) +
-  geom_vline(xintercept = jump_x, linetype = "dashed",
-             linewidth = 0.4, colour = col_jump) +
-  geom_hline(yintercept = jump_thr, linetype = "dotted",
-             linewidth = 0.4, colour = col_jump) +
-  geom_segment(aes(xend = Celsius, yend = 0),
-               colour = col_fit, linewidth = 0.7) +
-  geom_point(colour = col_fit, size = 1.6) +
-  x_scale +
-  scale_y_continuous(expand = expansion(mult = c(0, 0.1))) +
-  labs(x = "Temperature (°C)",
-       y = expression("Jump strength " * gamma)#,
-       # caption = paste0("Dashed lines mark the ", length(jump_x),
-       #                  " estimated jumps (jump strength above ", jump_thr,
-       #                  "); the shaded band is the fitted level ± 2 standard errors.")
-       ) +
-  theme_paper
-
-fig <- cowplot::plot_grid(p_fit, p_gamma, ncol = 1, align = "v", axis = "lr",
-                          rel_heights = c(2, 1))
-fig
-
-ggsave("demand_vs_temperature.pdf", fig, width = 6, height = 6, dpi = 300, bg = "white")
-
+df_warps |>
+  ggplot(aes(y = x, x = xi, size = warp, fill = method)) +
+  geom_point(shape = 21, color = "black", stroke = 1) +
+  facet_grid(~method) +
+  xlab(expression(xi)) +
+  ylab("Temperature (°C)") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle(expression("Warp place and size as a function of" ~ xi))
+ggsave("warp_place_size.pdf", width = 8, height = 4)
 

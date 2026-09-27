@@ -77,9 +77,9 @@ void project_simplex_inplace(const VectorXd& v, double budget,
 //'   \item{gamma}{The vector of added times (time jumps).}
 //'   \item{df}{Derivative of f.}
 //'   \item{edf}{Number of effective degrees of freedom.}
-//'   \item{rss}{Residual sum of squares with residuals = y - f.}
+//'   \item{rss}{Weighted residual sum of squares, sum_i w_i (y_i - f_i)^2.}
 //'   \item{gcv}{Generalized cross-validation.}
-//'   \item{loglik}{Gaussian log-likelihood evaluated at the unbiased residual variance sigma^2 = rss/(n - edf).}
+//'   \item{loglik}{Gaussian log-likelihood of the n fitted points, evaluated at the unbiased residual variance sigma^2 = rss/(n - edf). Every criterion below uses the same effective sample size n: the weighted rss holds only between-point variation, so it carries n - edf degrees of freedom whatever the weights.}
 //'   \item{aic}{Akaike information criterion.}
 //'   \item{aicc}{Akaike information criterion with bias correction.}
 //'   \item{bic}{Bayesian information criterion.}
@@ -109,7 +109,6 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
   VectorXd w(n);
   if (w_in.size() == n) { for (int i = 0; i < n; ++i) w[i] = w_in[i]; }
   else                    w.setOnes();
-  const double wsum = w.sum();
 
   VectorXd delta_x(n - 1);
   for (int i = 0; i < n - 1; ++i) delta_x[i] = x[i+1] - x[i];
@@ -237,25 +236,42 @@ List solve_jump_spline_fast(NumericVector x_in, NumericVector y_in,
   }
 
   // --- 6. Statistical criteria ---
-  // Weighted residual sum of squares.  With unit weights wsum == n and every
-  // formula below reduces exactly to the unweighted one.
+  // Weighted residual sum of squares.
   double rss = (w.array() * (y - f_curr).array().square()).sum();
-  double mse = rss / wsum;
 
-  double gcv = mse / std::pow(1.0 - edf_final / wsum, 2);
+  // The effective sample size is n, the number of points fitted, NOT sum(w).
+  // With weights standing for replicate counts, y_i is the mean of w_i
+  // observations and has variance sigma^2/w_i, so w_i*(y_i - f_i)^2 has
+  // expectation sigma^2 and the weighted rss carries n - edf degrees of
+  // freedom: it contains only the BETWEEN-point variation, the within-group
+  // scatter of the replicates having been removed by the collapse and never
+  // reaching this routine.  Dividing it by sum(w) - edf instead understates
+  // sigma by sqrt((sum(w) - edf)/(n - edf)) -- a factor of 3.9 on a 400
+  // observation, 40 site test -- and, worse, inflates the data-fit term of
+  // every criterion below relative to its penalty by sum(w)/n, so that the
+  // penalty is effectively that much too weak and the selection runs away to
+  // the largest budget on offer.  With unit weights sum(w) == n and every
+  // formula is unchanged.
+  const double n_eff = (double)n;
+  double mse = rss / n_eff;
+
+  double gcv = mse / std::pow(1.0 - edf_final / n_eff, 2);
 
   // Log-likelihood at sigma^2 = rss/(n - edf): does not collapse to +Inf
   // for near-perfect fits the way the concentrated (sigma^2 = rss/n) form does.
-  double df_resid   = wsum - edf_final;
+  // The 0.5*sum(log w) term is the Jacobian of the collapse; it is free of the
+  // budget, so it cannot affect selection, but it belongs in a reported density.
+  double df_resid   = n_eff - edf_final;
   double sigma2_hat = (df_resid > 0) ? rss / df_resid : mse;
-  double log_lik    = -0.5 * wsum * std::log(2 * M_PI)
-                    - 0.5 * wsum * std::log(sigma2_hat)
+  double log_lik    = -0.5 * n_eff * std::log(2 * M_PI)
+                    - 0.5 * n_eff * std::log(sigma2_hat)
+                    + 0.5 * w.array().log().sum()
                     - 0.5 * rss / sigma2_hat;
 
-  double aic  = wsum * std::log(mse) + 2 * edf_final;
-  double aicc = aic + (2 * edf_final * (edf_final + 1)) / (wsum - edf_final - 1);
-  double bic  = wsum * std::log(mse) + std::log(wsum) * edf_final;
-  double hq   = wsum * std::log(mse) + 2 * std::log(std::log(wsum)) * edf_final;
+  double aic  = n_eff * std::log(mse) + 2 * edf_final;
+  double aicc = aic + (2 * edf_final * (edf_final + 1)) / (n_eff - edf_final - 1);
+  double bic  = n_eff * std::log(mse) + std::log(n_eff) * edf_final;
+  double hq   = n_eff * std::log(mse) + 2 * std::log(std::log(n_eff)) * edf_final;
 
   // Extended BIC (Chen and Chen, 2008): bic plus 2*xi*k*log(p), where k is the
   // number of active jump locations and p = n-1 the number of candidates.
