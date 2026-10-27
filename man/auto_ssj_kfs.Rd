@@ -66,6 +66,11 @@ of_kfs <- auto_ssj_kfs(y = faithful$waiting,
 lines(x = of_kfs$x, y = of_kfs$smoothed_level, col = "blue", lwd = 2)
 
 }
+\references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+}
 \seealso{
 \code{\link{ssj_kfs}}.
 }

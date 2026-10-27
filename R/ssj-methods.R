@@ -153,8 +153,9 @@ new_ssj <- function(out, method, y, call) {
 #' It has zero rows when no discontinuity is declared.
 #'
 #' @references
-#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. (2026). Smoothing
-#' splines with some discontinuities.
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{plot.ssj}}, \code{\link{print.ssj}}.
 #'
@@ -242,6 +243,11 @@ ssj_breaks <- function(object, frac_total = 0.05, frac_delta = 0.30,
 #'   \code{thresh}, \code{frac_total} or \code{frac_delta}.
 #'
 #' @returns \code{x}, invisibly. Called for its side effect of printing.
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{plot.ssj}}, \code{\link{ssj_breaks}}.
 #'
@@ -357,8 +363,9 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #'   function being called for its side effect of drawing.
 #'
 #' @references
-#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. (2026). Smoothing
-#' splines with some discontinuities.
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{print.ssj}}, \code{\link{ssj_breaks}}.
 #'
@@ -598,6 +605,11 @@ plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
 #'   otherwise ignored.
 #'
 #' @returns Numeric vector of fitted values, in the same order as \code{xnew}.
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{plot.ssj}}, \code{\link{ssj_breaks}}.
 #'

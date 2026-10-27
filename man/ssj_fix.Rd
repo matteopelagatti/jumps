@@ -94,6 +94,11 @@ of_jum <- ssj_fix(y = faithful$waiting,
 lines(x = of_jum$x, y = of_jum$smoothed_level, col = "red", lwd = 2)
 
 }
+\references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+}
 \seealso{
 \code{\link{auto_ssj_fix}}, \code{\link{ssj_kfs}},
   \code{\link{ssj_mle}}, \code{\link{ssj_atw}}.

@@ -29,6 +29,11 @@ fit <- ssj_atw(y = faithful$waiting, x = faithful$eruptions,
 print(fit)
 
 }
+\references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+}
 \seealso{
 \code{\link{plot.ssj}}, \code{\link{ssj_breaks}}.
 }

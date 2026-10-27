@@ -76,6 +76,11 @@ print(hp)
 plot(hp, use_ggplot = FALSE)
 
 }
+\references{
+Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+107132. \doi{10.1016/j.econmod.2025.107132}
+}
 \seealso{
 \code{\link{hpfj}}, \code{\link{hpfj_fix}}, \code{\link{plot.hpj}},
   \code{\link{print.hpj}}.

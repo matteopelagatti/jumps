@@ -71,8 +71,9 @@ ssj_breaks(fit)
 
 }
 \references{
-Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. (2026). Smoothing
-splines with some discontinuities.
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
 }
 \seealso{
 \code{\link{plot.ssj}}, \code{\link{print.ssj}}.

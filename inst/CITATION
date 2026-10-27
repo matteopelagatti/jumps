@@ -10,7 +10,20 @@ bibentry(
   volume   = "150",
   pages    = "107132",
   issn     = "0264-9993",
-  doi      = "10.1016/j.econmod.2025.107132"
+  doi      = "10.1016/j.econmod.2025.107132",
+  header   = "The Hodrick-Prescott filter with jumps (hpj, hpfj, hpfj_fix, hpfjx) implements:"
+)
+
+bibentry(
+  bibtype  = "Misc",
+  title    = "Smoothing splines with some discontinuities",
+  author   = c(person("Matteo", "Pelagatti"),
+               person("Paolo", "Maranzano"),
+               person(c("Giulio", "Cesare"), "Gatto Ronchieri")),
+  year     = "2026",
+  note     = "arXiv preprint arXiv:2610.33137",
+  doi      = "10.48550/arXiv.2610.33137",
+  header   = "The smoothing splines with discontinuities obtained by time warping (ssj_mle, ssj_kfs, ssj_atw, ssj_fix and their auto_* wrappers) implement:"
 )
 
 bibentry(
@@ -24,5 +37,5 @@ bibentry(
   number   = "2",
   pages    = "651--664",
   doi      = "10.1080/10618600.2023.2262000",
-  header   = "The cubic smoothing splines with discontinuities (ssj_cssd_potts, auto_ssj_cssd) implement:"
+  header   = "The cubic smoothing splines with discontinuities (ssj_cssd, ssj_cssd_dp, auto_ssj_cssd, predict_cssd_dp) implement:"
 )

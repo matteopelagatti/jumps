@@ -43,6 +43,10 @@
 #' }
 #'
 #' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' Ravn, M. O. and Uhlig, H. (2002). On adjusting the Hodrick-Prescott filter
 #' for the frequency of observations. \emph{The Review of Economics and
 #' Statistics}, \strong{84}(2), 371--376. \doi{10.1162/003465302317411604}
@@ -235,6 +239,11 @@ hpfj_fix <- function(y, lambda, maxsum = sd(y, na.rm = TRUE), edf = TRUE,
 #'
 #' @returns The output of the \code{\link{hpfj_fix}} function corresponding to
 #'   the best choice according to the selected information criterion.
+#'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
 #'
 #' @seealso \code{\link{hpfj_fix}}, \code{\link{hpj}}.
 #'

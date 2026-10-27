@@ -50,6 +50,11 @@
 #'  \item \code{call}: the call to the function.
 #' }
 #'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' @seealso \code{\link{hpfj}}, \code{\link{hpfj_fix}}, \code{\link{plot.hpj}},
 #'   \code{\link{print.hpj}}.
 #'
@@ -145,6 +150,11 @@ hpj <- function(y, maxsum = NULL, lambda = NULL, xreg = NULL,
 #' @returns If \code{use_ggplot} is \code{TRUE}, a \pkg{ggplot2} object;
 #'   otherwise a base plot is drawn and \code{NULL} is returned invisibly.
 #'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' @examples
 #' set.seed(202311)
 #' n <- 100
@@ -223,6 +233,11 @@ plot.hpj <- function(x, prob = NULL, show_breaks = TRUE,
 #'
 #' @returns \code{x}, invisibly. Called for its side effect of printing.
 #'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' @examples
 #' set.seed(202311)
 #' n <- 100
@@ -272,6 +287,11 @@ print.hpj <- function(x, ...) {
 #'   two attributes: \code{df}, the number of degrees of freedom, and
 #'   \code{nobs}, the number of observations.
 #'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' @examples
 #' set.seed(202311)
 #' n <- 100
@@ -301,6 +321,11 @@ logLik.hpj <- function(object, ...) {
 #' @returns The number of non-missing observations of the time series to which
 #'   the HP filter with jumps has been applied.
 #'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' @examples
 #' set.seed(202311)
 #' n <- 100
@@ -326,6 +351,11 @@ nobs.hpj <- function(object, ...) {
 #'   corresponding BIC. If multiple objects are provided, a \code{data.frame}
 #'   with rows corresponding to the objects and columns representing the number
 #'   of parameters in the model (\code{df}) and the BIC.
+#'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
 #'
 #' @examples
 #' set.seed(202311)

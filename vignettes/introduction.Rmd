@@ -112,7 +112,8 @@ plot(hpj_emp, main = "Millions of employed in Italy: age 25-29")
 
 Besides the HP filter, the package fits cubic smoothing splines that allow a
 small number of discontinuities at unknown locations, following Pelagatti,
-Maranzano and Gatto Ronchieri (2026).
+Maranzano and Gatto Ronchieri (2026), "Smoothing splines with some
+discontinuities", arXiv:2610.33137, <doi:10.48550/arXiv.2610.33137>.
 
 The idea is to leave the classical roughness penalty untouched and instead
 deform the domain over which it is computed. Every pair of consecutive

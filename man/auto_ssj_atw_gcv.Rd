@@ -107,6 +107,10 @@ fit$pars["lambda"]
 
 }
 \references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+
 Craven, P. and Wahba, G. (1978). Smoothing noisy data with spline functions.
 \emph{Numerische Mathematik}, \strong{31}(4), 377--403.
 \doi{10.1007/BF01404567}
