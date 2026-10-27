@@ -374,25 +374,23 @@ print.ssj <- function(x, digits = max(3L, getOption("digits") - 3L), ...) {
 #' # is about 3.5, so a budget of 1 is already generous.
 #' fit <- ssj_atw(y = faithful$waiting, x = faithful$eruptions,
 #'                lambda = 1, maxsum = 1)
+#'
+#' # the default figure; no title is drawn unless one is asked for
 #' plot(fit)
 #'
-#' # no title is drawn unless one is asked for
-#' plot(fit, main = "Old Faithful", xlab = "eruption length",
-#'      ylab = "waiting time")
+#' # base graphics instead.  They honour 'warp_frac' at any ggplot2 version,
+#' # so give the warp panel a fifth of the height rather than the default 30%
+#' plot(fit, use_ggplot = FALSE, warp_frac = 0.2)
 #'
-#' # a single absolute threshold on the warps, as in Section 4.2 of the paper
-#' plot(fit, thresh = 1)
-#'
-#' # the default returns a ggplot object, so it can be extended
+#' # the ggplot2 figure is returned rather than drawn, so a single call can
+#' # carry the title, the axis labels and an absolute threshold on the warps
+#' # (as in Section 4.2 of the paper), and the result still takes any further
+#' # ggplot2 layer before it is printed
 #' if (requireNamespace("ggplot2", quietly = TRUE)) {
-#'   plot(fit) + ggplot2::labs(title = "Old Faithful")
+#'   plot(fit, thresh = 1, main = "Old Faithful",
+#'        xlab = "eruption length", ylab = "waiting time") +
+#'     ggplot2::labs(caption = "data: faithful")
 #' }
-#'
-#' # base graphics instead
-#' plot(fit, use_ggplot = FALSE)
-#'
-#' # give the warp panel a fifth of the height instead of the default 30%
-#' plot(fit, warp_frac = 0.2)
 #'
 #' @export
 plot.ssj <- function(x, y = NULL, prob = NULL, show_breaks = TRUE,
