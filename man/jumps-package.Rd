@@ -63,5 +63,10 @@ Authors:
   \item Paolo Maranzano \email{pmaranzano.ricercastatistica@gmail.com} (\href{https://orcid.org/0000-0002-9228-2759}{ORCID}) [copyright holder]
 }
 
+Other contributors:
+\itemize{
+  \item Giulio Cesare Gatto Ronchieri [contributor]
+}
+
 }
 \keyword{internal}
