@@ -112,6 +112,10 @@ ssj_warn_boundary <- function(lambda_grid, chosen, what) {
 #' }
 #'
 #' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
+#'
 #' Craven, P. and Wahba, G. (1978). Smoothing noisy data with spline functions.
 #' \emph{Numerische Mathematik}, \strong{31}(4), 377--403.
 #' \doi{10.1007/BF01404567}
@@ -230,6 +234,11 @@ auto_ssj_atw_gcv <- function(y, x, weights = NULL, lambda_grid = NULL,
 #'     cross-validated errors.
 #'   \item \code{lambda_source}: the string \code{"cv"}.
 #' }
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{auto_ssj_atw_gcv}}, \code{\link{auto_ssj_atw}},
 #'   \code{\link{ssj_atw}}.

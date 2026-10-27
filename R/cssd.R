@@ -54,6 +54,10 @@
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 #'
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
+#'
 #' @seealso \code{\link{ssj_cssd_dp}} for the exact cubic CSSD.
 #'
 #' @examples
@@ -159,6 +163,10 @@ ssj_cssd <- function(y, x = NULL, lambda, max_iter = 100L, rho = 1.0) {
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
 #'
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
+#'
 #' @seealso \code{\link{auto_ssj_cssd}}, \code{\link{predict_cssd_dp}},
 #'   \code{\link{ssj_cssd}}.
 #'
@@ -235,6 +243,11 @@ ssj_cssd_dp <- function(y, x = NULL, p = 0.999, gamma = 1, delta = 1) {
 #'   the value stored in \code{fit} is used.
 #'
 #' @returns Numeric vector of fitted values, in the same order as \code{xnew}.
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{ssj_cssd_dp}}.
 #'
@@ -329,6 +342,10 @@ predict_cssd_dp <- function(fit, xnew, y_orig = NULL, x_orig = NULL,
 #' Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
 #' signals. \emph{Journal of Computational and Graphical Statistics},
 #' \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
+#'
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{ssj_cssd_dp}}, \code{\link{predict_cssd_dp}}.
 #'

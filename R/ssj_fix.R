@@ -59,6 +59,11 @@
 #'  \item \code{x}: the ordered \code{x} variable.
 #' }
 #'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
+#'
 #' @seealso \code{\link{auto_ssj_fix}}, \code{\link{ssj_kfs}},
 #'   \code{\link{ssj_mle}}, \code{\link{ssj_atw}}.
 #'
@@ -297,6 +302,11 @@ ssj_fix <- function(y, x, lambda, maxsum = sd(y, na.rm = TRUE)/mean(diff(x)),
 #'
 #' @returns The output of the \code{\link{ssj_fix}} function corresponding to
 #'   the best choice according to the selected information criterion.
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{ssj_fix}}.
 #'

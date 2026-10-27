@@ -38,6 +38,10 @@
 #' }
 #'
 #' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
+#'
 #' Wahba, G. (1978). Improper priors, spline smoothing and the problem of
 #' guarding against model errors in regression. \emph{Journal of the Royal
 #' Statistical Society. Series B}, \strong{40}(3), 364--372.
@@ -212,6 +216,11 @@ hpfj <- function(y, maxsum = sd(y), edf = TRUE, parinit = NULL) {
 #'
 #' @returns The output of the \code{\link{hpfj}} function corresponding to the
 #'   best choice according to the selected information criterion.
+#'
+#' @references
+#' Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+#' automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+#' 107132. \doi{10.1016/j.econmod.2025.107132}
 #'
 #' @seealso \code{\link{hpfj}}, \code{\link{hpj}}.
 #'

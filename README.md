@@ -26,6 +26,10 @@ of the HP filter as a trend extractor.
 
 # Smoothing splines with discontinuities
 
+Reference: Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026),
+"Smoothing splines with some discontinuities", arXiv:2610.33137,
+[doi:10.48550/arXiv.2610.33137](https://doi.org/10.48550/arXiv.2610.33137).
+
 This part of the package implements two novel methods for fitting cubic smoothing splines
 that allow for a finite number of discontinuities at unknown locations.
 The key idea is to replace the physical spacing $\delta_i = x_{i+1} - x_i$ between consecutive

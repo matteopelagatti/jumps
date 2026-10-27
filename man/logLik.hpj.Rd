@@ -27,3 +27,8 @@ y <- mu + rnorm(n, sd = 20)
 logLik(hpj(y, 50))
 
 }
+\references{
+Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
+automatically selected breaks. \emph{Economic Modelling}, \strong{150},
+107132. \doi{10.1016/j.econmod.2025.107132}
+}

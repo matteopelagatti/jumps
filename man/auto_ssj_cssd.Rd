@@ -85,6 +85,10 @@ lines(fit$x, fit$smoothed_level, col = "darkgreen", lwd = 2)
 Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
 signals. \emph{Journal of Computational and Graphical Statistics},
 \strong{33}(2), 651--664. \doi{10.1080/10618600.2023.2262000}
+
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
 }
 \seealso{
 \code{\link{ssj_cssd_dp}}, \code{\link{predict_cssd_dp}}.

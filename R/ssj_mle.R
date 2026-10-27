@@ -135,6 +135,10 @@
 #' }
 #'
 #' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
+#'
 #' Chen, J. and Chen, Z. (2008). Extended Bayesian information criteria for
 #' model selection with large model spaces. \emph{Biometrika}, \strong{95}(3),
 #' 759--771. \doi{10.1093/biomet/asn034}
@@ -547,6 +551,11 @@ ssj_mle <- function(y, x, maxsum = max(x) - min(x), weights = NULL,
 #'
 #' @returns The output of the \code{\link{ssj_mle}} function corresponding to
 #'   the best choice according to the selected information criterion.
+#'
+#' @references
+#' Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+#' splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+#' \doi{10.48550/arXiv.2610.33137}
 #'
 #' @seealso \code{\link{ssj_mle}}.
 #'

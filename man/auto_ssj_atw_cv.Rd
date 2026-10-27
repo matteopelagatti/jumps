@@ -104,6 +104,11 @@ plot(x, y, pch = 16, cex = 0.6, col = "grey60")
 lines(fit$x, fit$smoothed_level, col = "steelblue", lwd = 2)
 
 }
+\references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+}
 \seealso{
 \code{\link{auto_ssj_atw_gcv}}, \code{\link{auto_ssj_atw}},
   \code{\link{ssj_atw}}.

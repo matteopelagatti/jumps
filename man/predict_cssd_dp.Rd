@@ -38,6 +38,11 @@ plot(x, y)
 lines(xnew, predict_cssd_dp(fit, xnew), col = "darkgreen", lwd = 2)
 
 }
+\references{
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
+}
 \seealso{
 \code{\link{ssj_cssd_dp}}.
 }

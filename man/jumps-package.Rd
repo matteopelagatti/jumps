@@ -21,6 +21,7 @@ The package provides three families of functions.
     spacing \eqn{\delta_i} between consecutive sampling sites is replaced by
     a latent spacing \eqn{\tau_i = \delta_i + \gamma_i}, and the warping
     variables \eqn{\gamma_i \ge 0} are estimated under a budget constraint.
+    The method is that of Pelagatti, Maranzano and Gatto Ronchieri (2026).
     See \code{\link{ssj_mle}}, \code{\link{ssj_kfs}}, \code{\link{ssj_atw}}
     and \code{\link{ssj_fix}}, together with their \code{auto_*} wrappers.
   \item \strong{Cubic smoothing splines with discontinuities (CSSD).} An
@@ -37,6 +38,10 @@ and \code{\link{dummyseas}}.
 Maranzano, P. and Pelagatti, M. (2025). A Hodrick-Prescott filter with
 automatically selected breaks. \emph{Economic Modelling}, \strong{150},
 107132. \doi{10.1016/j.econmod.2025.107132}
+
+Pelagatti, M., Maranzano, P. and Gatto Ronchieri, G. C. (2026). Smoothing
+splines with some discontinuities. \emph{arXiv preprint} arXiv:2610.33137.
+\doi{10.48550/arXiv.2610.33137}
 
 Storath, M. and Weinmann, A. (2024). Smoothing splines for discontinuous
 signals. \emph{Journal of Computational and Graphical Statistics},
