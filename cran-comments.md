@@ -45,14 +45,20 @@ The notes:
 
 ## macOS builder
 
-The macOS builder could not check the package. It stopped after six seconds
-at "checking package dependencies", reporting that none of the dependencies
--- 'Rcpp', 'nloptr', 'RcppEigen', 'knitr', 'rmarkdown', 'testthat',
-'ggplot2', 'xts' -- was installed on the build machine. All eight are plain
-CRAN packages, all are present locally and on win-builder, and the same
-check step passes in both of those environments, so this appears to be an
-unpopulated library on that service rather than a problem with the package.
-We will retry it.
+The macOS builder could not check the package, on two attempts a day apart
+(build IDs 1793189011-e99585e12f34b669 and 1793206562-7e713ac5eaa851f9,
+profile r-release-macosx-arm64, R 4.6.1). Both stopped within fifteen
+seconds at "checking package dependencies" reporting
+
+    Packages required but not available: 'Rcpp', 'nloptr', 'RcppEigen'
+    VignetteBuilder package required for checking but not installed: 'knitr'
+
+with the remaining suggested packages -- 'rmarkdown', 'testthat', 'ggplot2',
+'xts' -- also reported unavailable. All eight are plain CRAN packages, all
+are present locally and on win-builder, and that same check step passes in
+both of those environments, so the build machine's library appears to be
+unpopulated rather than the package having a dependency problem. No macOS
+result is therefore claimed here.
 
 ## Reverse dependencies
 
