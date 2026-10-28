@@ -17,25 +17,42 @@ The methods are described in two papers, both cited in `DESCRIPTION`:
 
 ## Test environments
 
-* local Windows 11, R 4.5.2 (x86_64-w64-mingw32)
-* win-builder, R-devel (x86_64-w64-mingw32)        -- TODO paste result
-* win-builder, R-release (x86_64-w64-mingw32)      -- TODO paste result
-* macOS builder, R-release (aarch64-apple-darwin20) -- TODO paste result
+* local Windows 11, R 4.5.2 (x86_64-w64-mingw32):
+  0 errors | 0 warnings | 2 notes
+* win-builder, R 4.6.1 release (x86_64-w64-mingw32):
+  0 errors | 0 warnings | 1 note
+* win-builder, R-devel (x86_64-w64-mingw32)         -- TODO paste result
+* macOS builder, R 4.6.1 Patched (aarch64-apple-darwin23):
+  the check could not run; see 'macOS builder' below
 
 ## R CMD check results
 
-0 errors | 0 warnings | 2 notes
+No errors and no warnings on either platform. Examples, tests, re-building
+of the vignettes and the PDF manual all pass; so do `CRAN incoming
+feasibility` and `R code for possible problems`.
 
-`CRAN incoming feasibility`, `R code for possible problems`, `tests`,
-`re-building of vignette outputs` and the PDF manual all pass cleanly.
+The notes:
 
-Both notes are properties of the machine the check ran on and do not arise
-on CRAN's check systems:
+* "Possibly misspelled words in DESCRIPTION: Gatto, Ronchieri, Storath,
+  Weinmann" (win-builder). All four are surnames: Giulio Cesare Gatto
+  Ronchieri, a contributor and co-author of the preprint cited above, and
+  Martin Storath and Andreas Weinmann, whose algorithm the CSSD functions
+  implement.
+* "unable to verify current time" (local only) -- that machine had no access
+  to the time service used by the test.
+* "Skipping checking math rendering: package 'V8' unavailable" (local only)
+  -- V8 is not installed on that machine.
 
-* "unable to verify current time" -- the check machine had no access to the
-  time service used by that test.
-* "Skipping checking math rendering: package 'V8' unavailable" -- V8 is not
-  installed on the check machine.
+## macOS builder
+
+The macOS builder could not check the package. It stopped after six seconds
+at "checking package dependencies", reporting that none of the dependencies
+-- 'Rcpp', 'nloptr', 'RcppEigen', 'knitr', 'rmarkdown', 'testthat',
+'ggplot2', 'xts' -- was installed on the build machine. All eight are plain
+CRAN packages, all are present locally and on win-builder, and the same
+check step passes in both of those environments, so this appears to be an
+unpopulated library on that service rather than a problem with the package.
+We will retry it.
 
 ## Reverse dependencies
 
