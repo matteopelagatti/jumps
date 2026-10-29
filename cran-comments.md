@@ -21,7 +21,6 @@ The methods are described in two papers, both cited in `DESCRIPTION`:
   0 errors | 0 warnings | 2 notes
 * win-builder, R 4.6.1 release (x86_64-w64-mingw32):
   0 errors | 0 warnings | 1 note
-* win-builder, R-devel (x86_64-w64-mingw32)         -- TODO paste result
 * macOS builder, R 4.6.1 Patched (aarch64-apple-darwin23):
   the check could not run; see 'macOS builder' below
 
