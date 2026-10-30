@@ -21,19 +21,21 @@ The methods are described in two papers, both cited in `DESCRIPTION`:
   0 errors | 0 warnings | 2 notes
 * win-builder, R 4.6.1 release (x86_64-w64-mingw32):
   0 errors | 0 warnings | 1 note
+* win-builder, R-devel 2026-10-28 r90783 (x86_64-w64-mingw32):
+  0 errors | 0 warnings | 1 note
 * macOS builder, R 4.6.1 Patched (aarch64-apple-darwin23):
   the check could not run; see 'macOS builder' below
 
 ## R CMD check results
 
-No errors and no warnings on either platform. Examples, tests, re-building
+No errors and no warnings on any of them. Examples, tests, re-building
 of the vignettes and the PDF manual all pass; so do `CRAN incoming
 feasibility` and `R code for possible problems`.
 
 The notes:
 
 * "Possibly misspelled words in DESCRIPTION: Gatto, Ronchieri, Storath,
-  Weinmann" (win-builder). All four are surnames: Giulio Cesare Gatto
+  Weinmann" (both win-builder runs). All four are surnames: Giulio Cesare Gatto
   Ronchieri, a contributor and co-author of the preprint cited above, and
   Martin Storath and Andreas Weinmann, whose algorithm the CSSD functions
   implement.
