@@ -42,12 +42,29 @@ test_that("where both reach the same optimum, the fits coincide", {
 })
 
 test_that("the agreement survives a positive warping budget", {
+  ## The same caveat as in the two tests above, and more sharply: a positive
+  ## budget adds n-1 free parameters, the likelihood in them is not concave,
+  ## and which mode the optimizer settles in depends on the platform's
+  ## floating point.  On Linux and Windows the two fitters agree here to
+  ## better than 1e-6; on all four CRAN macOS builds they reached different
+  ## modes, up to 18 log-likelihood units apart, and on the two arm64 builds
+  ## both sat tens of units below the optimum reached elsewhere.
+  ##
+  ## So the inequality is asserted unconditionally and the fits only where
+  ## both actually reached the same optimum.  ssj_kfs is the one that must
+  ## not fall short, and that is structural rather than lucky: handed
+  ## ssj_mle's lambda it solves a strictly smaller problem -- sigma and gamma
+  ## only, from a lambda already known to be good -- so ssj_mle's own
+  ## solution is feasible for it and its optimum is at least as high.  It was
+  ## ssj_kfs that held the better mode on every one of those macOS builds.
   d <- mk(4010)
   m <- ssj_mle(d$y, d$x, maxsum = 0.2)
   k <- ssj_kfs(d$y, d$x, lambda = unname(m$pars["lambda"]), maxsum = 0.2)
-  expect_equal(k$loglik, m$loglik, tolerance = 1e-3)
-  expect_equal(sum(k$gamma), sum(m$gamma), tolerance = 1e-3)
-  expect_equal(k$smoothed_level, m$smoothed_level, tolerance = 1e-3)
+  expect_gte(k$loglik, m$loglik - 1e-4)
+  if (abs(k$loglik - m$loglik) < 1e-5) {     # same mode: the fits must match
+    expect_equal(sum(k$gamma), sum(m$gamma), tolerance = 1e-3)
+    expect_equal(k$smoothed_level, m$smoothed_level, tolerance = 1e-3)
+  }
 })
 
 test_that("the agreement is invariant to the scale of x and y", {

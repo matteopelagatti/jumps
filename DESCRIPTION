@@ -1,8 +1,8 @@
 Package: jumps
 Type: Package
 Title: Hodrick-Prescott Filter and Spline Smoothing with Jumps
-Version: 2.0.0
-Date: 2026-10-27
+Version: 2.0.1
+Date: 2026-11-01
 Authors@R: c(
     person("Matteo", "Pelagatti", , "matteo.pelagatti@unimib.it", role = c("aut","cre","cph"),
            comment = c(ORCID = "0000-0002-1860-7535")),

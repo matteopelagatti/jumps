@@ -12,3 +12,4 @@ src/*.dll
 # R CMD check / build output
 *.Rcheck/
 *.tar.gz
+tests/testthat/Rplots.pdf

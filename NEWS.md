@@ -1,3 +1,26 @@
+# jumps 2.0.1
+
+Test-only release, addressing the check failures reported on the four CRAN
+macOS builds. No user-visible code changed, and no fitted result changes.
+
+Three assertions in the test suite required two independent optimizations over
+the warping parameters to settle in the same mode. With a positive warping
+budget that problem has `n-1` free parameters and a likelihood that is not
+concave in them, so the mode reached depends on the platform's floating-point
+arithmetic: on Linux and Windows the runs compared agree to better than 1e-6,
+while on macOS they diverged by up to 18 log-likelihood units. The assertions
+were testing which mode the optimizer happened to find, not the package.
+
+* `test-kfs-mle-agreement.R` now asserts, for a positive budget, that
+  `ssj_kfs()` is never worse than `ssj_mle()` at `ssj_mle()`'s own lambda --
+  which is the regression this file exists to guard, and which held on every
+  CRAN platform -- and compares the two fits only where they reached the same
+  optimum. The two tests at `maxsum = 0` already worked this way.
+* the grid-selection check in `test-loglik-scale.R` is now skipped on CRAN. The
+  scale-invariance it illustrates is asserted pointwise, to 1e-6, by the two
+  tests above it, which pass everywhere; the selected grid point itself can
+  move whenever the information criterion is flat, as it is on that data set.
+
 # jumps 2.0.0
 
 This is a major release: the package now covers smoothing splines with
