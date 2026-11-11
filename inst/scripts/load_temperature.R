@@ -57,6 +57,12 @@ head(df_temperature)
 ## ==========================================
 
 
+# NOTE: this file is NOT included in the package, because the GME (Gestore dei
+# Mercati Energetici) does not allow the redistribution of its data.  It can be
+# rebuilt by merging (row-binding) the tables contained in the daily files
+# yyyymmddMGPQuantita.xml available from the GME website
+# (https://www.mercatoelettrico.org/), keeping only the dates from 20230101 to
+# 20260407, and saving the result as inst/scripts/MGPquant_20230101_20260407.csv.
 df_load <- read.csv("./inst/scripts/MGPquant_20230101_20260407.csv")
 
 df_load$Data <- as.Date(as.character(df_load$Data), format = "%Y%m%d")

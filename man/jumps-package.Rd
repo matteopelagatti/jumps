@@ -60,6 +60,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Matteo Pelagatti \email{matteo.pelagatti@unimib.it} (\href{https://orcid.org/0000-0002-1860-7535}{ORCID}) [copyright holder]
   \item Paolo Maranzano \email{pmaranzano.ricercastatistica@gmail.com} (\href{https://orcid.org/0000-0002-9228-2759}{ORCID}) [copyright holder]
 }
 

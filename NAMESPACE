@@ -36,20 +36,24 @@ export(ssj_mle)
 export(trigseas)
 importFrom(Rcpp,evalCpp)
 importFrom(grDevices,adjustcolor)
-importFrom(graphics,abline)
-importFrom(graphics,layout)
-importFrom(graphics,lines)
-importFrom(graphics,mtext)
-importFrom(graphics,par)
-importFrom(graphics,points)
-importFrom(graphics,polygon)
+importFrom(graphics,
+  abline,
+  layout,
+  lines,
+  mtext,
+  par,
+  points,
+  polygon
+)
 importFrom(nloptr,nloptr)
-importFrom(stats,BIC)
-importFrom(stats,logLik)
-importFrom(stats,nobs)
-importFrom(stats,optim)
-importFrom(stats,qnorm)
-importFrom(stats,sd)
-importFrom(stats,time)
-importFrom(stats,var)
+importFrom(stats,
+  BIC,
+  logLik,
+  nobs,
+  optim,
+  qnorm,
+  sd,
+  time,
+  var
+)
 useDynLib(jumps, .registration = TRUE)

@@ -32,7 +32,6 @@ Imports: Rcpp (>= 1.0.10),
          utils
 LinkingTo: Rcpp,
            RcppEigen
-RoxygenNote: 7.3.3
 Suggests:
     knitr,
     rmarkdown,
@@ -45,3 +44,4 @@ Encoding: UTF-8
 LazyData: true
 URL: https://github.com/matteopelagatti/jumps
 BugReports: https://github.com/matteopelagatti/jumps/issues
+Config/roxygen2/version: 8.1.1
