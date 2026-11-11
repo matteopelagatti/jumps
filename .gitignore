@@ -13,3 +13,6 @@ src/*.dll
 *.Rcheck/
 *.tar.gz
 tests/testthat/Rplots.pdf
+data-raw/load_temp.rda
+inst/scripts/MGPquant*.csv
+ssj_replication_package.zip

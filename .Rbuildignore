@@ -24,3 +24,7 @@
 ^vignettes/.*_files$
 ^vignettes/[^/]*\.R$
 ^data-raw$
+# Replication package archive and unredistributable raw data
+^ssj_replication_package\.zip$
+^inst/scripts/MGPquant.*
+^data-raw/load_temp\.rda$

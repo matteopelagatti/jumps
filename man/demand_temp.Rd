@@ -19,8 +19,9 @@ A \code{data.frame} with 1691 rows and two columns:
 data(demand_temp)
 }
 \description{
-The homogeneous sub-sample of \code{\link{load_temp}} used in the electricity
-demand versus temperature application. It keeps only Tuesdays to Thursdays,
+The homogeneous sample of hourly electricity load (Northern Italy) and
+temperature (Milan) used in the electricity demand versus temperature
+application. It keeps only Tuesdays to Thursdays,
 the non-vacation months (February-March, May-July, September-November) and
 the central hours of the working day (10-15), and drops loads below
 15000 MWh and temperatures of 35 degrees Celsius or above. These filters
@@ -28,12 +29,10 @@ remove the weekday, holiday and time-of-day effects that would otherwise
 confound the relationship between demand and temperature.
 }
 \details{
-The script that builds this data set from \code{load_temp} is in
-\code{data-raw/demand_temp.R} of the package sources;
-\code{inst/scripts/load_temperature.R} shows how \code{load_temp} itself is
-assembled from the raw GME and Open-Meteo sources.
-}
-\seealso{
-\code{\link{load_temp}} for the full hourly series.
+The hourly observations span 2023-01-01 to 2025-09-30. The temperature was
+downloaded from the Open-Meteo archive (latitude 45.4642, longitude 9.1900).
+The full hourly load series is not redistributed with the package;
+\code{inst/scripts/load_temperature.R} shows how it is assembled from the raw
+GME and Open-Meteo sources.
 }
 \keyword{datasets}

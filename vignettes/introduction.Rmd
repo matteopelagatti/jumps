@@ -245,10 +245,10 @@ legend("bottomleft", bty = "n", cex = 0.85,
 # Application: electricity demand and temperature
 
 The package ships the data used in the electricity demand versus temperature
-application of `inst/scripts/load_temperature.R`. `load_temp` holds the full
-hourly series (Northern-Italy load from the GME day-ahead market, Milan
-temperature from the Open-Meteo archive, 2023-01-01 to 2025-09-30), while
-`demand_temp` is the homogeneous analysis sample obtained from it: Tuesdays to
+application of `inst/scripts/load_temperature.R`. `demand_temp` is a
+homogeneous sample of the hourly series (Northern-Italy load from the GME
+day-ahead market, Milan temperature from the Open-Meteo archive, 2023-01-01 to
+2025-09-30): Tuesdays to
 Thursdays only, non-vacation months, the central hours 10-15, and no extreme
 loads or temperatures. Those filters strip out the weekday, holiday and
 time-of-day effects that would otherwise confound the relationship of interest.

@@ -1,3 +1,16 @@
+# jumps 2.0.2
+
+Data-licensing release. No R or C++ code changed, and no fitted result changes.
+
+* The data set `load_temp` (hourly electricity load of Northern Italy and
+  temperature of Milan) has been removed, together with the raw GME
+  day-ahead market file `inst/scripts/MGPquant_20230101_20260407.csv`, because
+  the terms of use of the Gestore dei Mercati Energetici (GME) do not allow
+  their redistribution with the package. `demand_temp`, the filtered analysis
+  sample used in the vignette, is unchanged. `inst/scripts/load_temperature.R`
+  still documents how the series is assembled from the GME and Open-Meteo
+  sources, which users can obtain under GME's own terms.
+
 # jumps 2.0.1
 
 Test-only release, addressing the check failures reported on the four CRAN

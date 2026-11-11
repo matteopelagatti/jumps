@@ -1,19 +1,19 @@
 # Replication script for the electricity-demand vs. temperature example.
 #
-# It documents how the two data sets shipped with the package were assembled
-# from their original sources:
+# It documents how the data set `demand_temp` shipped with the package was
+# assembled from its original sources (hourly load + temperature):
 #
-#   data(load_temp)     # full hourly series (load + temperature)
 #   data(demand_temp)   # the filtered analysis sample used below
 #
-# You do NOT need to run this script to reproduce the analysis: both data sets
-# are already available with data().  Section 4 of the introduction vignette
+# You do NOT need to run this script to reproduce the analysis: the filtered
+# sample is already available with data().  Section 4 of the introduction vignette
 # reproduces the figures below with base graphics only.
 #
 # NOTE: the raw day-ahead market file MGPquant_20230101_20260407.csv is *not*
-# shipped with the package (it is ~11 MB).  Download it from the GME FTP site
-# (https://www.mercatoelettrico.org/) and place it in ./inst/scripts/ if you
-# want to re-run the assembly from scratch.
+# shipped with the package: GME data may not be redistributed.  Obtain it from
+# the GME site (https://www.mercatoelettrico.org/) under GME's own terms of use
+# and place it in ./inst/scripts/ if you want to re-run the assembly from
+# scratch.
 #
 # This script requires the packages httr, jsonlite, tidyverse, cowplot and
 # scales, none of which is a dependency of `jumps`.

@@ -2,54 +2,31 @@
 
 ## Submission summary
 
-This is a fix release. It addresses the test failures reported on the four
-CRAN macOS builds for version 2.0.0 (r-release-macos-arm64,
-r-release-macos-x86_64, r-oldrel-macos-arm64, r-oldrel-macos-x86_64), with a
-correction deadline of 2026-11-20.
+This is a data-licensing release (2.0.2). The Gestore dei Mercati Energetici
+(GME), whose day-ahead market data underlie the `load_temp` data set, does not
+allow redistribution of those data with the package. Version 2.0.2 therefore
+removes the data set `load_temp` and the raw GME file shipped in
+`inst/scripts/`. No R or C++ code changed and no fitted result changes.
 
-It is a test-only change. No R or C++ code was touched, no documented
-behaviour changed, and no fitted result changes.
+We kindly ask the CRAN team to archive the earlier versions that contain the
+GME data (2.0.0 and 2.0.1, if the latter was published), so that they are no
+longer distributed.
 
-`NEWS.md` has the details; in short, three assertions required two
-independent optimizations over the warping parameters to settle in the same
-mode. With a positive warping budget that problem has `n-1` free parameters
-and a log-likelihood that is not concave in them, so the mode reached depends
-on the platform's floating-point arithmetic. On Linux and Windows the runs
-compared agree to better than 1e-6; on the macOS builds they diverged by up
-to 18 log-likelihood units. The assertions were pinning down which mode the
-optimizer happened to find, not a property of the package.
-
-The two tests affected now assert what is platform-independent:
-
-* in `test-kfs-mle-agreement.R`, that `ssj_kfs()` at `ssj_mle()`'s own lambda
-  is never worse than `ssj_mle()` -- the regression that file exists to
-  guard, and which held on every CRAN platform including all four macOS
-  builds -- and the fitted curves are compared only where the two reached the
-  same optimum. The sibling tests at `maxsum = 0` already worked this way.
-* the grid-selection check in `test-loglik-scale.R` is skipped on CRAN. The
-  scale invariance it illustrates is asserted pointwise, to 1e-6, by the two
-  tests above it, which pass on every platform; the selected grid point can
-  move whenever the information criterion is flat, as it is on that data set.
+The data set `demand_temp` (a filtered sample used in the vignette) is kept.
+`R CMD check` and the vignettes no longer reference `load_temp`.
 
 ## Test environments
 
 * local Windows 11, R 4.5.2 (x86_64-w64-mingw32):
-  0 errors | 0 warnings | 3 notes
+  0 errors | 0 warnings | 1 note
 
 ## R CMD check results
 
 No errors and no warnings. Examples, tests, re-building of the vignettes and
 the PDF manual all pass.
 
-The notes:
+The note:
 
-* "Days since last update: 2". 2.0.0 was published on 2026-10-30; this
-  release exists only to fix the macOS test failures reported against it.
-* "Examples with CPU or elapsed time > 5s: plot.ssj 5.14s elapsed" (local
-  only). Almost all of that is the one-off cost of loading ggplot2's
-  namespace, which `plot.ssj()` uses by default. The example was already
-  reduced to two renders for 2.0.0 and the CRAN check farm did not report
-  this note on any flavour, so the example is unchanged here.
 * "Skipping checking math rendering: package 'V8' unavailable" (local only)
   -- V8 is not installed on that machine.
 

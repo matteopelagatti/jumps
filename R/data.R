@@ -27,44 +27,22 @@
 #' @source Eurostat.
 "employed_IT"
 
-#' Hourly electricity load of Northern Italy and temperature of Milan
-#'
-#' Hourly observations from 2023-01-01 01:00:00 to 2025-09-30 23:00:00. The
-#' electricity load for Northern Italy was downloaded from the FTP site of the
-#' GME (mercatoelettrico.org). The temperature was downloaded from the
-#' Open-Meteo archive (latitude 45.4642, longitude 9.1900).
-#'
-#' @docType data
-#'
-#' @usage data(load_temp)
-#'
-#' @format A \code{data.frame} with 24092 rows and three columns:
-#' \describe{
-#'   \item{Datetime}{A \code{POSIXct} object with day and hour.}
-#'   \item{Load}{The electricity load of Northern Italy, in MWh.}
-#'   \item{Temperature}{The temperature of Milan, in degrees Celsius.}
-#' }
-#'
-#' @keywords datasets
-#'
-#' @source \href{https://www.mercatoelettrico.org/}{GME},
-#'   \href{https://open-meteo.com/}{Open-Meteo}.
-"load_temp"
-
 #' Electricity demand and temperature: the analysis sample
 #'
-#' The homogeneous sub-sample of \code{\link{load_temp}} used in the electricity
-#' demand versus temperature application. It keeps only Tuesdays to Thursdays,
+#' The homogeneous sample of hourly electricity load (Northern Italy) and
+#' temperature (Milan) used in the electricity demand versus temperature
+#' application. It keeps only Tuesdays to Thursdays,
 #' the non-vacation months (February-March, May-July, September-November) and
 #' the central hours of the working day (10-15), and drops loads below
 #' 15000 MWh and temperatures of 35 degrees Celsius or above. These filters
 #' remove the weekday, holiday and time-of-day effects that would otherwise
 #' confound the relationship between demand and temperature.
 #'
-#' The script that builds this data set from \code{load_temp} is in
-#' \code{data-raw/demand_temp.R} of the package sources;
-#' \code{inst/scripts/load_temperature.R} shows how \code{load_temp} itself is
-#' assembled from the raw GME and Open-Meteo sources.
+#' The hourly observations span 2023-01-01 to 2025-09-30. The temperature was
+#' downloaded from the Open-Meteo archive (latitude 45.4642, longitude 9.1900).
+#' The full hourly load series is not redistributed with the package;
+#' \code{inst/scripts/load_temperature.R} shows how it is assembled from the raw
+#' GME and Open-Meteo sources.
 #'
 #' @docType data
 #'
@@ -77,8 +55,6 @@
 #' }
 #'
 #' @keywords datasets
-#'
-#' @seealso \code{\link{load_temp}} for the full hourly series.
 #'
 #' @source \href{https://www.mercatoelettrico.org/}{GME},
 #'   \href{https://open-meteo.com/}{Open-Meteo}.
