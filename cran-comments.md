@@ -2,9 +2,10 @@
 
 ## Submission summary
 
-This is a data-licensing release (2.0.2). The Gestore dei Mercati Energetici
+This is a data-licensing release (2.0.3, resubmitting 2.0.2, which did not pass
+the incoming checks). The Gestore dei Mercati Energetici
 (GME), whose day-ahead market data underlie the `load_temp` data set, does not
-allow redistribution of those data with the package. Version 2.0.2 therefore
+allow redistribution of those data with the package. Version 2.0.3 therefore
 removes the data set `load_temp` and the raw GME file shipped in
 `inst/scripts/`. No R or C++ code changed and no fitted result changes.
 
@@ -14,6 +15,12 @@ longer distributed.
 
 The data set `demand_temp` (a filtered sample used in the vignette) is kept.
 `R CMD check` and the vignettes no longer reference `load_temp`.
+
+The incoming check of 2.0.2 failed on linux-arm64 in one test assertion
+(`test-ssj.R`), which required the warping budget to be respected to a relative
+1e-8; the augmented-Lagrangian optimizer only satisfies it to its convergence
+tolerance and overshot by a relative 3e-7 on that platform. The tolerance in the
+test is now 1e-5. No package code changed.
 
 ## Test environments
 

@@ -181,9 +181,12 @@ test_that("the default maxsum is the range of x, not the rescaled one", {
   expect_identical(formals(ssj_mle)$maxsum, formals(ssj_kfs)$maxsum)
   expect_identical(formals(ssj_mle)$maxsum, formals(ssj_atw)$maxsum)
 
-  # and the constraint is actually enforced at that value
+  # and the constraint is actually enforced at that value, to within the
+  # optimizer's tolerance: the augmented-Lagrangian solver only satisfies the
+  # inequality up to its own convergence tolerance, which on linux-arm64 left a
+  # violation of 3e-7 in relative terms (3.3500011 against 3.3500000)
   f <- ssj_mle(fa$waiting, fa$eruptions)
-  expect_lte(sum(f$gamma), f$maxsum * (1 + 1e-8))
+  expect_lte(sum(f$gamma), f$maxsum * (1 + 1e-5))
 
   # an explicit budget equal to the default reproduces the default fit
   expect_equal(ssj_mle(fa$waiting, fa$eruptions, maxsum = rng)$smoothed_level,

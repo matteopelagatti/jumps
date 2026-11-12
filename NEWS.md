@@ -1,6 +1,14 @@
-# jumps 2.0.2
+# jumps 2.0.3
 
 Data-licensing release. No R or C++ code changed, and no fitted result changes.
+(Version 2.0.2 was submitted but did not pass the incoming checks, so its
+changes are part of this release.)
+
+* The test that the default `maxsum` is enforced (`test-ssj.R`) compared
+  `sum(gamma)` with `maxsum` to a relative 1e-8. The augmented-Lagrangian
+  optimizer satisfies the budget constraint only up to its convergence
+  tolerance, and on linux-arm64 the sum exceeded the budget by a relative
+  3e-7. The tolerance is now 1e-5; the fit itself is unchanged.
 
 * The data set `load_temp` (hourly electricity load of Northern Italy and
   temperature of Milan) has been removed, together with the raw GME
